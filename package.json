@@ -1,0 +1,72 @@
+{
+  "name": "drivedeck",
+  "productName": "DriveDeck",
+  "version": "0.17.0",
+  "description": "A customizable BeamNG.drive instrument cluster and Windows media dashboard.",
+  "private": true,
+  "author": "DriveDeck contributors",
+  "license": "MIT",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "preview": "node scripts/preview.cjs",
+    "smoke": "electron . --smoke-test",
+    "package": "electron-builder --win dir",
+    "portable": "node scripts/build-release.cjs --portable",
+    "installer": "node scripts/build-release.cjs",
+    "release:build": "node scripts/build-release.cjs --require-feed"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "fengari": "^0.1.5",
+    "hls.js": "^1.7.4",
+    "js-yaml": "4.3.2"
+  },
+  "build": {
+    "appId": "studio.drivedeck.desktop",
+    "productName": "DriveDeck",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "README.md",
+      "LICENSE",
+      "scripts/smoke.cjs",
+      "test/fixtures.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "beamng",
+        "to": "beamng"
+      },
+      {
+        "from": "native",
+        "to": "native"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "signExecutable": false,
+      "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "DriveDeck-${version}-portable.exe"
+    },
+    "nsis": {
+      "artifactName": "DriveDeck-Setup-${version}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
+}

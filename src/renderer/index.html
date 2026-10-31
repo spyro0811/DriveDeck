@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://*.itunes.apple.com https://*.mzstatic.com; media-src 'self' file: blob:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>DriveDeck</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="decks.css">
+</head>
+<body>
+  <div id="app" data-theme="aura" data-layout="touring">
+    <header class="topbar">
+      <div class="wordmark"><svg viewBox="0 0 30 28" aria-hidden="true"><path d="M3 22 12 6h6L9 22zm10 0L22 6h6L19 22z" fill="currentColor"/></svg><span>DRIVE<span class="muted-word">DECK</span></span><span class="version">BETA</span></div>
+      <span class="top-divider"></span><div class="workspace-label">YOUR DRIVE. YOUR DISPLAY.</div>
+      <div class="top-spacer"></div>
+      <button class="connection-pill" id="connection-button" title="Open BeamNG connection settings"><span class="status-dot" id="status-dot"></span><span id="connection-label">WAITING FOR BEAMNG</span></button>
+      <span id="clock" class="clock">00:00</span>
+      <div class="window-actions"><button id="minimize-button" class="icon-button" aria-label="Minimize" data-icon="minus"></button><button id="close-button" class="icon-button close-window" aria-label="Close DriveDeck" data-icon="close"></button></div>
+    </header>
+
+    <div class="app-body">
+      <nav class="rail" aria-label="Dashboard tools">
+        <button class="rail-button active" id="dashboard-button" aria-label="Dashboard" title="Dashboard" data-icon="dashboard"></button>
+        <button class="rail-button" id="themes-button" aria-label="Themes and customization" title="Themes & customization" data-icon="palette"></button>
+        <button class="rail-button" id="media-view-button" aria-label="Media settings" title="Media" data-icon="music"></button>
+        <div class="rail-divider"></div>
+        <button class="rail-button" id="demo-button" aria-label="Toggle demo drive" title="Demo drive" data-icon="play"></button>
+        <div class="rail-spacer"></div>
+        <button class="rail-button" id="display-button" aria-label="Choose display" title="Display & fullscreen" data-icon="monitor"></button>
+        <button class="rail-button" id="settings-button" aria-label="Settings and connection" title="Settings" data-icon="settings"></button>
+      </nav>
+
+      <main class="cockpit">
+        <div class="cockpit-header">
+          <div class="deck-switcher"><button id="deck-library-button" aria-haspopup="dialog" aria-controls="deck-library"><span data-icon="grid"></span><span id="deck-library-name">Deck library</span><span class="library-button-label">LIBRARY</span></button></div>
+          <button id="brand-button" class="brand-button" title="Choose your marque"><span class="brand-emblem" id="brand-emblem">A</span><span><span id="brand-name" class="brand-name">AURA</span><span id="brand-tagline" class="brand-tagline">THE ORIGINAL DRIVEDECK EXPERIENCE</span></span><span class="brand-chevron" data-icon="chevron"></span></button>
+          <div class="drive-mode" id="layout-switch" role="group" aria-label="Dashboard layout"><button data-layout="touring" class="selected">TOURING</button><button data-layout="sport">SPORT</button><button data-layout="focus">FOCUS</button></div>
+          <div class="vehicle-identity"><span class="tiny-label">CURRENT VEHICLE</span><span id="vehicle-name">BeamNG.drive</span><span id="theme-mode" class="theme-mode">MANUAL THEME</span></div>
+          <div class="deck-controls"><label id="demo-mode-control" hidden>DEMO MODE <select id="demo-drive-mode" aria-label="Demo drive mode"><option value="comfort">Comfort</option><option value="sport">Sport</option><option value="arsenic">Arsenic</option><option value="off">ESC Off</option><option value="offroad">Offroad</option><option value="street">Strada</option><option value="track">Corse</option><option value="drift">Drift</option><option value="topspeed">Velocità</option><option value="race">Race</option></select></label><button id="deck-design-button" title="Decks and design" aria-label="Decks and design" data-icon="palette"></button><button id="deck-connect-button" title="Connection settings" aria-label="Connection settings" data-icon="settings"></button><button id="deck-display-button" title="Display settings" aria-label="Display settings" data-icon="monitor"></button><button id="deck-demo-button" title="Toggle demo drive" aria-label="Toggle demo drive" data-icon="play"></button></div>
+        </div>
+
+        <div id="deck-stage" class="deck-stage" hidden></div>
+
+        <div class="dashboard-grid">
+          <section class="cluster" aria-label="Vehicle instruments">
+            <div class="cluster-topline"><span class="cluster-label"><span class="mini-dot"></span> INSTRUMENT CLUSTER</span><div class="signals"><span id="signal-left" class="signal" data-icon="arrowLeft" aria-label="Left turn signal"></span><span id="high-beam" class="signal highbeam" data-icon="beam" aria-label="High beams"></span><span id="signal-right" class="signal" data-icon="arrowRight" aria-label="Right turn signal"></span></div><span id="telemetry-caption" class="cluster-label">AWAITING TELEMETRY</span></div>
+            <div class="instruments">
+              <div class="tachometer" id="tachometer">
+                <svg viewBox="0 0 320 280" class="tach-svg" aria-label="Engine revolutions per minute">
+                  <defs><linearGradient id="arc-gradient"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--accent)"/></linearGradient><filter id="needle-glow"><feGaussianBlur stdDeviation="3"/></filter></defs>
+                  <path id="tach-track" class="tach-track"/><path id="tach-redline" class="tach-redline"/><path id="tach-progress" class="tach-progress"/>
+                  <g id="tach-ticks"></g><g id="tach-labels"></g>
+                  <g id="tach-needle"><path d="M158 163 160 51 163 163Z" class="needle"/><circle cx="160" cy="163" r="7" class="needle-hub"/></g>
+                  <text id="rpm-value" x="160" y="215" class="rpm-number">—</text><text x="160" y="238" class="rpm-unit">RPM × 1000</text>
+                </svg>
+              </div>
+              <div class="speedometer">
+                <div class="speed-eyebrow"><span class="speed-label">GROUND SPEED</span><span id="demo-badge" class="demo-badge" hidden>DEMO DRIVE</span></div>
+                <div class="speed-line"><span id="speed-value" class="speed-value">—</span><span class="speed-unit" id="speed-unit">MPH</span></div>
+                <div class="gear-row"><span class="gear-box" id="gear-value">—</span><span class="gear-description">GEAR<span id="drive-description">READY WHEN YOU ARE</span></span><span class="drive-lines"><i></i><i></i><i></i></span></div>
+                <div class="pedals"><div class="pedal"><span>THROTTLE</span><div class="pedal-track"><i id="throttle-bar"></i></div><b id="throttle-value">—</b></div><div class="pedal brake"><span>BRAKE</span><div class="pedal-track"><i id="brake-bar"></i></div><b id="brake-value">—</b></div></div>
+              </div>
+            </div>
+            <div class="cluster-bottom"><div><span class="tiny-label">FUEL LEVEL</span><div class="metric-line"><span data-icon="fuel" class="metric-icon"></span><strong id="fuel-value">—</strong><span class="metric-unit">%</span><div class="fuel-track"><i id="fuel-bar"></i></div></div></div><div class="metric-separator"></div><div><span class="tiny-label">COOLANT</span><div class="metric-line"><span data-icon="temperature" class="metric-icon"></span><strong id="temperature-value">—</strong><span class="metric-unit">°C</span></div></div><div class="metric-separator"></div><div class="warning-area" aria-live="polite"><span id="warning-text">NO VEHICLE DATA</span><span id="warning-icon" data-icon="car"></span></div></div>
+            <div class="waiting-overlay" id="waiting-overlay"><span data-icon="radio"></span><div><strong>Your cockpit is ready.</strong><p>Connect BeamNG, or take a demo drive.</p></div><button id="start-demo" class="small-action">TRY DEMO <span data-icon="arrowRight"></span></button></div>
+          </section>
+
+          <aside class="widgets" id="widgets" aria-label="Dashboard widgets">
+            <section class="widget media-widget" id="media-widget" data-widget="media">
+              <div class="widget-heading"><span><span class="widget-icon" data-icon="music"></span> NOW PLAYING</span><span id="media-source" class="widget-meta">WINDOWS MEDIA</span></div>
+              <div class="media-content"><div class="album-art" id="album-art"><video id="album-motion" muted loop playsinline disablepictureinpicture hidden></video><img id="album-image" alt="Album artwork" hidden><div class="album-fallback"><span data-icon="music"></span></div><span class="album-equalizer" id="album-equalizer"><i></i><i></i><i></i><i></i></span></div><div class="track-details"><h1 id="track-title">Bring your soundtrack.</h1><p id="track-artist">Play something in your favorite app.</p><span id="track-album">Spotify · browsers · Windows players</span></div></div>
+              <div class="classic-mini"><canvas id="classic-levels" aria-label="Live six-band visualizer"></canvas></div><div class="media-progress"><div class="progress-track"><i id="media-progress"></i></div><div class="track-times"><span id="media-position">0:00</span><span id="media-duration">0:00</span></div></div>
+              <div class="media-controls"><span class="media-session-icon" data-icon="audio"></span><button id="media-previous" class="icon-button" aria-label="Previous track" data-icon="previous" disabled></button><button id="media-toggle" class="play-button" aria-label="Play or pause" data-icon="play" disabled></button><button id="media-next" class="icon-button" aria-label="Next track" data-icon="next" disabled></button><span class="playing-indicator" id="playing-indicator">IDLE</span></div>
+            </section>
+            <section class="widget vehicle-widget" id="vehicle-widget" data-widget="vehicle"><div class="vehicle-widget-copy"><span class="tiny-label">DESIGNED AROUND YOU</span><strong id="profile-title">AURA / TOURING</strong><span id="profile-subtitle">An original digital cockpit.</span></div><svg class="car-illustration" viewBox="0 0 280 100" aria-hidden="true"><path class="car-shadow" d="M20 84h241"/><path class="car-body" d="m23 66 11-20 62-8 30-23h64l31 26 35 9 7 20-15 8H35l-17-7z"/><path class="car-window" d="m111 37 22-17h48l22 19z"/><path class="car-detail" d="M160 21v19M46 52l28-4M231 51l19 7M94 46l-3 20h105l-1-19"/><circle cx="70" cy="73" r="18" class="car-wheel"/><circle cx="218" cy="73" r="18" class="car-wheel"/><circle cx="70" cy="73" r="8" class="car-rim"/><circle cx="218" cy="73" r="8" class="car-rim"/></svg></section>
+            <section class="widget journey-widget" id="journey-widget" data-widget="journey"><span class="journey-icon" data-icon="route"></span><div><span class="tiny-label">THIS DRIVE</span><strong><span id="trip-value">0.0</span> <small id="trip-unit">MI</small></strong></div><div class="journey-time"><span class="tiny-label">ELAPSED</span><strong id="trip-time">00:00</strong></div><button id="reset-trip" class="icon-button" title="Reset this drive" aria-label="Reset this drive" data-icon="reset"></button></section>
+          </aside>
+        </div>
+
+        <footer class="cockpit-footer"><span class="footer-game"><span class="beam-mark">b</span> BeamNG.drive <span class="footer-separator">/</span><span id="footer-status">Waiting for your next drive</span></span><span class="footer-right"><span id="demo-footer" hidden>SIMULATED VEHICLE DATA</span><button id="unit-button" class="footer-button">MPH <span data-icon="swap"></span></button><button id="fullscreen-button" class="footer-button"><span data-icon="expand"></span> FULLSCREEN</button></span></footer>
+      </main>
+    </div>
+
+    <div class="panel-backdrop" id="panel-backdrop" hidden></div>
+    <aside class="settings-panel" id="settings-panel" aria-label="Customization and settings" aria-modal="true" role="dialog" hidden>
+      <div class="panel-header"><div><span class="tiny-label">MAKE IT YOURS</span><h2 id="panel-title">Your cockpit.</h2></div><button id="panel-close" class="icon-button" aria-label="Close settings" data-icon="close"></button></div>
+      <div class="panel-tabs" role="tablist"><button role="tab" data-tab="themes">DESIGN</button><button role="tab" data-tab="connection">CONNECT</button><button role="tab" data-tab="display">DISPLAY</button></div>
+      <div class="panel-scroll">
+        <div class="tab-content" id="tab-themes">
+          <h3>Choose a deck</h3><p class="section-description">Entirely different instruments, maps, and materials. Ultra decks use original Apple-inspired styling.</p><button id="deck-library-open" class="primary-button">Browse deck library</button><label class="toggle-row"><span><strong>Match Vivace automatically</strong><small>Switch to the Vivace S deck when driving a Vivace.</small></span><input type="checkbox" id="auto-deck"><span class="toggle"></span></label><div class="panel-rule"></div>
+          <div class="section-heading"><h3>Choose your marque</h3><span>8 EXPERIENCES</span></div><p class="section-description">Original themes and independent interpretations of your favorite marques.</p>
+          <div id="theme-grid" class="theme-grid"></div>
+          <label class="toggle-row"><span><strong>Match the vehicle automatically</strong><small>Requires the optional BeamNG companion.</small></span><input type="checkbox" id="auto-theme"><span class="toggle"></span></label>
+          <details class="settings-details"><summary>Vehicle → theme mappings</summary><p class="section-description">Match part of a BeamNG vehicle folder name. For modded cars, add a keyword such as <b>bmw</b> or <b>911</b>.</p><div id="mapping-list"></div><div class="mapping-form"><input id="mapping-key" placeholder="Vehicle keyword" maxlength="64" aria-label="Vehicle keyword"><select id="mapping-theme" aria-label="Mapped theme"></select><button id="mapping-add" class="small-action">ADD</button></div></details>
+          <div class="panel-rule"></div><h3>Your own identity</h3><label class="field">Marque name<input id="custom-name" maxlength="24" placeholder="YOUR MARQUE"></label><label class="color-field"><span>Signature color</span><input type="color" id="accent-color" value="#d5f38a"><span id="accent-hex">#D5F38A</span></label><p class="section-description">Your name and color appear in the Custom theme.</p>
+          <div class="panel-rule"></div><h3>Instruments</h3><div class="field-grid"><label class="field">RPM scale<input id="max-rpm" type="number" min="1000" max="30000" step="500"></label><label class="field">Redline<input id="redline" type="number" min="500" max="30000" step="100"></label></div><p class="section-description">The companion can supply each engine’s RPM limit. Your configured redline remains the shift threshold.</p>
+          <div class="panel-rule"></div><h3>Live map</h3><label class="toggle-row"><span><strong>Terrain surface colors</strong><small>Color open terrain by surface material; built-up blocks use a neutral urban base. Turn off for a plain background.</small></span><input type="checkbox" id="map-terrain"><span class="toggle"></span></label><label class="field">Atlas view<select id="atlas-view"><option value="2d">2D · Overhead</option><option value="3d">3D · Perspective</option></select><small>3D tilts live roads and uses reported building heights when available.</small></label><label class="field">Map appearance<select id="map-appearance"><option value="dark">Dark</option><option value="light">Light</option></select></label><label class="toggle-row"><span><strong>Rotate map with the vehicle</strong><small>Turn off to keep north at the top.</small></span><input type="checkbox" id="map-heading"><span class="toggle"></span></label><label class="field">Map zoom<input type="range" id="map-zoom" min="0.4" max="3" step="0.1"></label>
+          <div class="panel-rule"></div><h3>Widgets & order</h3><p class="section-description">Show, hide, and reorder the cards beside your instruments.</p><div id="widget-controls" class="widget-controls"></div>
+          <div class="panel-rule"></div><div class="button-row"><button id="export-settings" class="secondary-button"><span data-icon="download"></span> Export setup</button><button id="import-settings" class="secondary-button"><span data-icon="upload"></span> Import setup</button></div>
+        </div>
+        <div class="tab-content" id="tab-connection" hidden>
+          <div class="connection-card"><span data-icon="radio"></span><div><strong id="settings-connection-status">Waiting for BeamNG</strong><small id="settings-connection-detail">Listening locally on UDP 4444</small></div></div>
+          <h3>Connect BeamNG.drive</h3><ol class="setup-steps"><li><b>Open the game’s Options.</b><span>Find <strong>Protocols</strong> under Other or Advanced, depending on your game version.</span></li><li><b>Enable OutGauge UDP.</b><span>Set the address to <code>127.0.0.1</code> and the port to the number below. Set the update rate to <strong>30–60 Hz</strong>.</span></li><li><b>Spawn or reload your vehicle.</b><span>Press <strong>Ctrl + R</strong>. Your instruments connect when packets arrive.</span></li></ol>
+          <div class="port-setting"><label class="field">UDP listening port<input id="udp-port" type="number" min="1024" max="65535"></label><button id="apply-port" class="primary-button">Apply port</button></div><p class="section-description">Another dashboard may already use 4444. Choose a free port and match it in the game.</p>
+          <div class="panel-rule"></div><h3>Maps & live drive modes</h3><p class="section-description">Install the updated companion for real BeamNG roads, vehicle position, navigation routes, and the active drive mode. Enable <b>Other UDP protocols</b> in BeamNG, then reload the vehicle. OutGauge alone cannot send these values.</p><button id="install-companion" class="primary-button"><span data-icon="download"></span> Install companion…</button><p class="section-description">Choose the BeamNG user folder shown by your launcher. Restart the game after the first install.</p><button id="open-companion" class="secondary-button"><span data-icon="folder"></span> Open companion & instructions</button>
+          <div class="panel-rule"></div><h3>Windows media</h3><p class="section-description">DriveDeck reads the current Windows media session. Start Spotify, a compatible browser, or another media player. Track information and available playback controls appear automatically.</p><div class="media-status-box" id="media-helper-status">Checking Windows media…</div><p class="section-description">Demo mode previews track artwork and controls. Its sample track is silent.</p>
+          <div class="panel-rule"></div><h3>Animated artwork</h3>
+          <label class="toggle-row"><span><strong>Use animated artwork</strong><small>Fall back to the regular cover when unavailable.</small></span><input type="checkbox" id="animated-artwork"><span class="toggle"></span></label>
+          <label class="field">Try first<select id="animation-first"><option value="canvas">Spotify Canvas → Apple Music → cover</option><option value="apple">Apple Music → Spotify Canvas → cover</option></select></label>
+          <p id="animation-effective-order" class="section-description">Spotify Canvas → Apple Music → Album cover</p>
+          <label class="toggle-row"><span><strong>Spotify Canvas</strong><small>Uses a local clip you assign to the current song.</small></span><input type="checkbox" id="canvas-enabled"><span class="toggle"></span></label>
+          <p class="section-description">Spotify does not expose Canvas through its public API. Automatic Canvas access is unavailable; add an MP4 or WebM clip if you have one.</p>
+          <div class="animation-buttons"><button id="add-canvas-clip" class="secondary-button">Add Canvas clip…</button><button id="remove-canvas-clip" class="secondary-button" disabled>Clear song clip</button></div>
+          <label class="toggle-row"><span><strong>Apple Music animated covers</strong><small>Automatically look up matching album artwork.</small></span><input type="checkbox" id="apple-enabled"><span class="toggle"></span></label>
+          <p class="section-description">When enabled, the song’s title, artist, and album are sent to Apple’s public US catalog. Some albums have no animation. You do not need to play through Apple Music.</p>
+          <div class="media-status-box" id="animation-status">Regular album cover</div>
+          <div class="animation-buttons"><button id="retry-animation" class="secondary-button">Retry lookup</button><button id="open-animation-source" class="secondary-button" disabled>View on Apple Music</button></div>
+          <div class="panel-rule"></div><label class="toggle-row"><span><strong>Demo drive</strong><small>Preview simulated vehicle data and media.</small></span><input type="checkbox" id="demo-toggle"><span class="toggle"></span></label>
+        </div>
+        <div class="tab-content" id="tab-display" hidden>
+          <h3>Choose your display</h3><p class="section-description">Send your cockpit to the XENEON EDGE or any connected monitor. The app remembers your selection.</p><div id="display-list" class="display-list"></div><button id="refresh-displays" class="secondary-button"><span data-icon="reset"></span> Refresh displays</button>
+          <div class="panel-rule"></div><h3>Window</h3><button id="panel-fullscreen" class="primary-button"><span data-icon="expand"></span> Toggle fullscreen</button><p class="section-description">F11 toggles fullscreen. Escape returns to a window.</p><label class="toggle-row"><span><strong>Keep above other windows</strong><small>Useful for a dashboard beside the game.</small></span><input type="checkbox" id="always-on-top"><span class="toggle"></span></label>
+          <div class="panel-rule"></div><label class="field">Dashboard brightness <span id="brightness-value">100%</span><input id="brightness" type="range" min="20" max="100" step="5"></label><label class="field">Speed & distance units<select id="units-select"><option value="mph">Miles per hour / miles</option><option value="kmh">Kilometers per hour / kilometers</option></select></label>
+          <div class="panel-rule"></div><h3>App updates</h3><p id="update-status" class="section-description" role="status">Checking update availability…</p><div class="button-row"><button id="update-check" class="secondary-button">Check for updates</button><button id="update-settings-action" class="primary-button" hidden></button></div><div class="panel-rule"></div><div class="about-app"><span class="wordmark">DRIVEDECK</span><p>Made for the drive.<br>A standalone BeamNG cockpit, inspired by integrated automotive displays.</p><span id="app-version">VERSION 0.1.0</span></div>
+        </div>
+      </div><div class="panel-footer"><span class="status-dot connected"></span> <span id="save-status">Changes save automatically</span></div>
+    </aside>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </div>
+  <section id="update-banner" class="update-banner" aria-label="DriveDeck update" role="status" hidden><div><strong id="update-title"></strong><p id="update-message"></p></div><div class="button-row"><button id="update-action" class="primary-button"></button><button id="update-dismiss" class="secondary-button">Later</button></div></section>
+  <dialog id="deck-library" class="deck-library" aria-labelledby="deck-library-title"><header><div><span>YOUR COCKPIT</span><h2 id="deck-library-title">Deck library</h2></div><button id="deck-library-close" aria-label="Close deck library">×</button></header><p>Choose a dashboard for your next drive.</p><div id="deck-grid" class="deck-grid"></div></dialog>
+  <script src="vendor/hls.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.runtime/
+artifacts/
+
+SESSION.md
+.env
+.env.*
+*.pfx
+*.p12
