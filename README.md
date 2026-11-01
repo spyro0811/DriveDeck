@@ -2,11 +2,6 @@
 
 A standalone Windows cockpit for **BeamNG.drive**, designed for the **Corsair XENEON EDGE (2560 × 720)** and other secondary displays. 
 
-Model S uses a dark speed/RPM cluster with a forward-facing rear-view illustration while driving and the matching BeamNG model preview in P. Studio backgrounds are removed from local previews. Model Three combines a light vehicle panel with live roads, buildings and navigation on the right. Both retain the shared music player, visualizer. Images come from installed BeamNG model previews, including supported mods: paint and custom parts may differ, and a rear view or live 3D model is not available. Missing previews show a neutral illustration. No companion reload is needed.
-
-## Start the app
-
-
 Open **Display** (monitor icon), select your Edge, and the cockpit opens fullscreen there. **F11** toggles fullscreen; **Escape** returns to a window. Ultra/Vivace fullscreen hides the app chrome; move the pointer to the top edge to reveal the deck selector and controls. The display selection is remembered.
 
 Click the **play icon** to take a demo drive. Demo vehicle data, sample roads, artwork, and the silent sample track are explicitly labeled. The demo selector previews Comfort, Sport, Arsenic, ESC Off, and Offroad. Turn demo off to use actual telemetry and Windows media.
