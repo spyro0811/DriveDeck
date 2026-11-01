@@ -89,6 +89,7 @@ function registerHandlers() {
     try{animated.library.add(current,result.filePaths[0]);animated.retry();return {ok:true};}catch(error){return {ok:false,error:error.message};}
   });
   handle('animation:open-source', async () => {const url=animated.state.pageUrl;if(url&&/^https:\/\/music\.apple\.com\/us\/album\/\d+$/.test(url)){await shell.openExternal(url);return {ok:true};}return {ok:false};});
+  handle('media:seek', seconds => media.command('seek',seconds));
   handle('media:command', action => media.command(action));
   handle('window:fullscreen', () => { window.setFullScreen(!window.isFullScreen()); return { ok: true }; });
   handle('window:minimize', () => window.minimize());

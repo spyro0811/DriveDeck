@@ -8,3 +8,6 @@ SESSION.md
 .env.*
 *.pfx
 *.p12
+
+# Local demo recording
+demo/assets/*.mp3

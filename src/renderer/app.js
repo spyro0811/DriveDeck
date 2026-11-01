@@ -2,7 +2,7 @@ import { UpdatesView } from './updates.mjs';
 import { AudioCanvas } from './audio.mjs';
 import { MotionArtwork } from './motion-artwork.mjs';
 import { icon, hydrateIcons } from './icons.mjs';
-import { THEMES, resolveTheme } from './themes.mjs';
+import { resolveTheme } from './themes.mjs';
 import { demoTelemetry, demoMedia } from './demo.mjs';
 import { clamp, speedInUnits, gearLabel, durationLabel, arcPath, Trip } from './model.mjs';
 import { previewApi } from './preview.mjs';
@@ -43,48 +43,13 @@ async function save(patch, message) {
   saveQueue = job.catch(() => {}); return job;
 }
 
-function themeCards() {
+function deckCards() {
   $('deck-grid').innerHTML = DECKS.map(deck => `<button class="deck-choice" data-deck-choice="${deck.id}" aria-label="Choose ${deck.name}"><img src="assets/decks/${deck.id}.png" alt="${deck.name} dashboard preview"><div><strong>${deck.name}</strong><small>${deck.note}</small></div></button>`).join('');
-  $('theme-grid').innerHTML = THEMES.map(theme => `<button class="theme-card ${theme.id === 'custom' ? 'custom' : ''}" data-theme-choice="${theme.id}" style="--card-accent:${theme.accent}" aria-label="Choose ${theme.title}"><span>${theme.name}</span><strong>${theme.title}</strong><small>${theme.description}</small></button>`).join('');
-  $('mapping-theme').innerHTML = THEMES.map(theme => `<option value="${theme.id}">${theme.name}</option>`).join('');
 }
 
-function renderMappings() {
-  $('mapping-list').replaceChildren();
-  for (const [key, value] of Object.entries(settings.brandMappings)) {
-    const row = document.createElement('div'); row.className = 'mapping-row';
-    const label = document.createElement('span'); label.textContent = key;
-    const theme = document.createElement('span'); theme.textContent = THEMES.find(t => t.id === value)?.name || value;
-    const remove = document.createElement('button'); remove.className = 'icon-button'; remove.innerHTML = icon('close'); remove.setAttribute('aria-label', `Remove ${key} mapping`);
-    remove.addEventListener('click', () => { const mappings = { ...settings.brandMappings }; delete mappings[key]; void save({ brandMappings: mappings }); });
-    row.append(label, theme, remove); $('mapping-list').append(row);
-  }
-}
-
-function renderWidgets() {
-  const names = { media: 'Now playing', vehicle: 'Vehicle profile', journey: 'This drive' };
-  const ordered = [...settings.widgets, ...Object.keys(names).filter(w => !settings.widgets.includes(w))];
-  $('widget-controls').replaceChildren();
-  for (const widget of ordered) {
-    const enabled = settings.widgets.includes(widget);
-    const row = document.createElement('div'); row.className = 'widget-control';
-    row.innerHTML = `<label class="toggle-row"><span>${names[widget]}</span><input type="checkbox" ${enabled ? 'checked' : ''} aria-label="Show ${names[widget]}"><span class="toggle"></span></label><button class="icon-button widget-up" aria-label="Move ${names[widget]} up">${icon('up')}</button><button class="icon-button widget-down" aria-label="Move ${names[widget]} down">${icon('down')}</button>`;
-    row.querySelector('input').addEventListener('change', event => {
-      const widgets = event.target.checked ? [...settings.widgets, widget] : settings.widgets.filter(w => w !== widget);
-      void save({ widgets });
-    });
-    const index = settings.widgets.indexOf(widget);
-    row.querySelector('.widget-up').disabled = !enabled || index === 0;
-    row.querySelector('.widget-down').disabled = !enabled || index === settings.widgets.length - 1;
-    const move = direction => {
-      const widgets = [...settings.widgets]; const next = index + direction;
-      [widgets[index], widgets[next]] = [widgets[next], widgets[index]]; void save({ widgets });
-    };
-    row.querySelector('.widget-up').addEventListener('click', () => move(-1));
-    row.querySelector('.widget-down').addEventListener('click', () => move(1));
-    $('widget-controls').append(row);
-  }
-  for (const widget of Object.keys(names)) $(`${widget}-widget`).hidden = !settings.widgets.includes(widget);
+// Preserve legacy saved widget layouts without exposing retired customization controls.
+function applyWidgetLayout() {
+  for (const widget of ['media','vehicle','journey']) $(`${widget}-widget`).hidden = !settings.widgets.includes(widget);
   for (const widget of settings.widgets) $('widgets').append($(`${widget}-widget`));
   $('dashboard-grid')?.classList.toggle('no-widgets', !settings.widgets.length);
   document.querySelector('.dashboard-grid').style.gridTemplateColumns = !settings.widgets.length ? '1fr' : '';
@@ -133,17 +98,17 @@ function applySettings(next) {
   $('unit-button').innerHTML = `${settings.units === 'kmh' ? 'KM/H' : 'MPH'} ${icon('swap')}`;
   text('trip-unit', settings.units === 'kmh' ? 'KM' : 'MI');
   document.querySelectorAll('#layout-switch [data-layout]').forEach(button => { button.classList.toggle('selected', button.dataset.layout === settings.layout); button.setAttribute('aria-pressed', String(button.dataset.layout === settings.layout)); });
-  $('auto-theme').checked = settings.autoTheme; $('demo-toggle').checked = settings.demo;
+  $('demo-toggle').checked = settings.demo;
   $('always-on-top').checked = settings.alwaysOnTop;
-  for (const [id, key] of [['custom-name', 'customName'], ['accent-color', 'accent'], ['max-rpm', 'maxRpm'], ['redline', 'redline'], ['udp-port', 'port'], ['brightness', 'brightness'], ['units-select', 'units']]) {
+  for (const [id, key] of [['max-rpm', 'maxRpm'], ['redline', 'redline'], ['udp-port', 'port'], ['brightness', 'brightness'], ['units-select', 'units']]) {
     if (document.activeElement !== $(id)) $(id).value = settings[key];
   }
-  text('accent-hex', settings.accent.toUpperCase()); text('brightness-value', `${settings.brightness}%`);
+  text('brightness-value', `${settings.brightness}%`);
   $('demo-button').classList.toggle('demo-active', settings.demo);
   $('demo-button').setAttribute('aria-pressed', String(settings.demo));
   $('demo-badge').hidden = !settings.demo; $('demo-footer').hidden = !settings.demo;
   activeTheme = null; applyTheme(settings.demo ? null : live.connected ? live.vehicleId : null);
-  renderMappings(); renderWidgets();
+  applyWidgetLayout();
   if (demoChanged && settings.demo) { demoStarted = performance.now(); demoLastTick = performance.now(); demoPosition = 67; demoPaused = false; }
 }
 
@@ -326,6 +291,11 @@ async function playback(action) {
   const result = await api.mediaCommand(action); if (!result?.ok) toast(result?.error || 'Media control unavailable.', true);
 }
 
+async function seekMedia(seconds){
+ if(settings.demo){demoPosition=clamp(seconds,0,demoTracks[demoTrack%demoTracks.length].duration);demoLastTick=performance.now();return;}
+ const result=await api.seekMedia(seconds);if(!result?.ok)toast(result?.error||'Seeking is unavailable for this player.',true);
+}
+
 function bindEvents() {
   $('deck-library-button').onclick = () => { $('deck-library').showModal(); $('deck-library-close').focus(); };
   $('deck-library-close').onclick=()=>$('deck-library').close();
@@ -346,20 +316,15 @@ function bindEvents() {
   $('media-view-button').onclick = () => openPanel('connection'); $('display-button').onclick = () => openPanel('display');
   $('dashboard-button').onclick = closePanel; $('panel-close').onclick = closePanel; $('panel-backdrop').onclick = closePanel;
   document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => openPanel(button.dataset.tab); });
-  document.querySelectorAll('[data-theme-choice]').forEach(button => { button.onclick = () => save({ theme: button.dataset.themeChoice, autoTheme: false }); });
   document.querySelectorAll('#layout-switch [data-layout]').forEach(button => { button.onclick = () => save({ layout: button.dataset.layout }); });
   $('animated-artwork').onchange=event=>save({animatedArtwork:event.target.checked});
   $('canvas-enabled').onchange=event=>save({canvasEnabled:event.target.checked});
   $('apple-enabled').onchange=event=>save({appleEnabled:event.target.checked});
   $('animation-first').onchange=event=>save({animationOrder:event.target.value==='apple'?['apple','canvas']:['canvas','apple']});
   for(const [id,method]of [['add-canvas-clip','addCanvasClip'],['remove-canvas-clip','removeCanvasClip'],['retry-animation','retryAnimation'],['open-animation-source','openAnimationSource']])$(id).onclick=async()=>{const result=await api[method]();if(!result?.ok&&!result?.canceled)toast(result?.error||'This action is unavailable.',true);};
-  $('auto-theme').onchange = event => save({ autoTheme: event.target.checked });
   $('demo-toggle').onchange = event => save({ demo: event.target.checked });
   $('always-on-top').onchange = event => save({ alwaysOnTop: event.target.checked });
   $('demo-button').onclick = () => save({ demo: !settings.demo }); $('start-demo').onclick = () => save({ demo: true });
-  $('custom-name').onchange = event => save({ customName: event.target.value, theme: 'custom', autoTheme: false });
-  $('accent-color').oninput = event => { text('accent-hex', event.target.value.toUpperCase()); };
-  $('accent-color').onchange = event => save({ accent: event.target.value, theme: 'custom', autoTheme: false });
   $('max-rpm').onchange = event => { const n = Number(event.target.value); if (n >= 1000 && n <= 30000) void save({ maxRpm: n }); else toast('Choose an RPM scale from 1,000 to 30,000.', true); };
   $('redline').onchange = event => { const n = Number(event.target.value); if (n >= 500 && n <= settings.maxRpm) void save({ redline: n }); else toast('Redline must be between 500 and your RPM scale.', true); };
   $('apply-port').onclick = () => { const port = Number($('udp-port').value); if (Number.isInteger(port) && port >= 1024 && port <= 65535) void save({ port }, `Listening on UDP ${port}. Match this port in BeamNG.`); else toast('Choose a UDP port between 1024 and 65535.', true); };
@@ -367,11 +332,6 @@ function bindEvents() {
   $('brightness').onchange = event => save({ brightness: Number(event.target.value) });
   $('units-select').onchange = event => { smoothSpeed = 0; void save({ units: event.target.value }); };
   $('unit-button').onclick = () => { smoothSpeed = 0; void save({ units: settings.units === 'mph' ? 'kmh' : 'mph' }); };
-  $('mapping-add').onclick = () => {
-    const key = $('mapping-key').value.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,64}$/.test(key) || ['__proto__', 'constructor', 'prototype'].includes(key)) { toast('Use letters, numbers, underscores, or dashes for a vehicle keyword.', true); return; }
-    void save({ brandMappings: { ...settings.brandMappings, [key]: $('mapping-theme').value } }); $('mapping-key').value = '';
-  };
   $('reset-trip').onclick = () => { (settings.demo ? demoTrip : liveTrip).reset(); toast('This drive has been reset.'); };
   $('media-toggle').onclick = () => playback('toggle'); $('media-next').onclick = () => playback('next'); $('media-previous').onclick = () => playback('previous');
   $('fullscreen-button').onclick = () => api.toggleFullscreen(); $('panel-fullscreen').onclick = () => api.toggleFullscreen();
@@ -391,9 +351,9 @@ function bindEvents() {
 }
 
 async function boot() {
-  hydrateIcons(); themeCards();
+  hydrateIcons(); deckCards();
   classicLevels=new AudioCanvas($('classic-levels'),6);
-  deckView = new DeckView($('deck-stage'), { playback, atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
+  deckView = new DeckView($('deck-stage'), { playback, seek:seekMedia, atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
   classicMotion=new MotionArtwork($('album-motion'),(source,key)=>api.animationFailed?.(source,key));
   const revs = document.createElement('div'); revs.className = 'sport-revs'; revs.setAttribute('aria-hidden', 'true'); revs.innerHTML = '<i></i>'.repeat(28); document.querySelector('.cluster').append(revs);
   api.onTelemetry(value => { live = value; }); api.onMedia(value => { media = value; }); api.onSettings(applySettings);

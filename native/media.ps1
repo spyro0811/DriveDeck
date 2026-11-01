@@ -46,6 +46,15 @@ try {
                 $session = $manager.GetCurrentSession()
                 if ($null -eq $session) { throw 'No active media session.' }
                 $operation = switch ($request.action) {
+                    'seek' {
+                        if (-not $session.GetPlaybackInfo().Controls.IsPlaybackPositionEnabled) { throw 'This player does not support seeking.' }
+                        $timelineNow = $session.GetTimelineProperties()
+                        $seconds = [double]$request.position
+                        $maximum = ($timelineNow.EndTime - $timelineNow.StartTime).TotalSeconds
+                        if ([double]::IsNaN($seconds) -or [double]::IsInfinity($seconds) -or $seconds -lt 0 -or $seconds -gt $maximum) { throw 'Invalid playback position.' }
+                        $ticks = $timelineNow.StartTime.Ticks + [TimeSpan]::FromSeconds($seconds).Ticks
+                        $session.TryChangePlaybackPositionAsync([int64]$ticks)
+                    }
                     'toggle' { $session.TryTogglePlayPauseAsync() }
                     'next' { $session.TrySkipNextAsync() }
                     'previous' { $session.TrySkipPreviousAsync() }
@@ -113,6 +122,7 @@ try {
                         position = [Math]::Min($position, $duration); duration = $duration;
                         artwork = $artwork;
                         canToggle = $playback.Controls.IsPlayPauseToggleEnabled;
+                        canSeek = $playback.Controls.IsPlaybackPositionEnabled;
                         canNext = $playback.Controls.IsNextEnabled; canPrevious = $playback.Controls.IsPreviousEnabled
                     } }
                 }

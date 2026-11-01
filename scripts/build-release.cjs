@@ -9,5 +9,5 @@ if(require.main===module){
   const repository=process.env.DRIVEDECK_RELEASE_REPOSITORY||require('../release.config.json').repository;
   if(process.argv.includes('--require-feed')&&!repository)throw new Error('Set repository in release.config.json or DRIVEDECK_RELEASE_REPOSITORY before making a public release.');
   const {build,Platform}=require('electron-builder');
-  build({projectDir:path.resolve(__dirname,'..'),targets:Platform.WINDOWS.createTarget(process.argv.includes('--portable')?['portable']:['nsis']),publish:'never',config:releaseConfig(repository)}).catch(e=>{console.error(e);process.exitCode=1;});
+  build({projectDir:path.resolve(__dirname,'..'),targets:Platform.WINDOWS.createTarget(process.argv.includes('--all')?['nsis','portable']:process.argv.includes('--portable')?['portable']:['nsis']),publish:'never',config:releaseConfig(repository)}).catch(e=>{console.error(e);process.exitCode=1;});
 }

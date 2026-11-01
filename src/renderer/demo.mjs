@@ -1,6 +1,6 @@
 export const demoMedia = {
   available: true, title: 'Midnight, in motion', artist: 'DriveDeck Studio', album: 'AFTER HOURS / VOL. 01',
-  playing: true, position: 67, duration: 248, canToggle: true, canNext: true, canPrevious: true,
+  playing: true, position: 67, duration: 248, canToggle: true, canNext: true, canPrevious: true, canSeek: true,
   source: 'SILENT DEMO', artwork: null,
 };
 export function demoTelemetry(seconds) {

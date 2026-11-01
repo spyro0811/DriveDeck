@@ -1,7 +1,7 @@
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
-const EMPTY = { available: false, title: '', artist: '', album: '', playing: false, position: 0, duration: 0, artwork: null, canToggle: false, canNext: false, canPrevious: false };
+const EMPTY = { available: false, title: '', artist: '', album: '', playing: false, position: 0, duration: 0, artwork: null, canToggle: false, canNext: false, canPrevious: false, canSeek: false };
 
 class Media extends EventEmitter {
   constructor({ scriptPath = path.join(__dirname, '../../native/media.ps1') } = {}) { super(); this.scriptPath = scriptPath; this.state = { ...EMPTY }; this.child = null; this.pending = new Map(); this.id = 0; }
@@ -42,16 +42,17 @@ class Media extends EventEmitter {
     child.on('error', ended); child.on('exit', ended);
     child.stdin.on('error', () => {});
   }
-  command(action) {
-    if (!['toggle', 'next', 'previous'].includes(action)) return Promise.resolve({ ok: false, error: 'Unknown media action.' });
+  command(action,position) {
+    if (!['toggle', 'next', 'previous','seek'].includes(action)) return Promise.resolve({ ok: false, error: 'Unknown media action.' });
     if (!this.child || !this.state.available) return Promise.resolve({ ok: false, error: 'Start playback in Spotify, a browser, or another Windows media app first.' });
-    const capability = { toggle: 'canToggle', next: 'canNext', previous: 'canPrevious' }[action];
+    if(action==='seek'&&(!Number.isFinite(position)||position<0||!Number.isFinite(this.state.duration)||position>this.state.duration))return Promise.resolve({ok:false,error:'Invalid playback position.'});
+    const capability = { toggle: 'canToggle', next: 'canNext', previous: 'canPrevious',seek:'canSeek' }[action];
     if (!this.state[capability]) return Promise.resolve({ ok: false, error: 'This player does not support that control.' });
     const id = ++this.id;
     return new Promise(resolve => {
       const timer = setTimeout(() => { this.pending.delete(id); resolve({ ok: false, error: 'The media player did not respond.' }); }, 5000);
       this.pending.set(id, { resolve, timer });
-      this.child.stdin.write(`${JSON.stringify({ id, action })}\n`);
+      this.child.stdin.write(`${JSON.stringify({ id, action,...(action==='seek'?{position}:{}) })}\n`);
     });
   }
   stop() { if (this.child) { this.child.kill(); this.child = null; } }

@@ -15,7 +15,9 @@
     "package": "electron-builder --win dir",
     "portable": "node scripts/build-release.cjs --portable",
     "installer": "node scripts/build-release.cjs",
-    "release:build": "node scripts/build-release.cjs --require-feed"
+    "release:build": "node scripts/build-release.cjs --require-feed",
+    "demo:build": "node scripts/build-demo.cjs",
+    "demo:serve": "node scripts/build-demo.cjs && node scripts/demo-server.cjs"
   },
   "devDependencies": {
     "electron": "^45.1.0",
