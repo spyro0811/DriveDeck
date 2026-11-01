@@ -1,21 +1,11 @@
 # DriveDeck
 
-A standalone Windows cockpit for **BeamNG.drive**, designed for the **Corsair XENEON EDGE (2560 × 720)** and other secondary displays. Version 0.17.0 adds a Windows installer and an opt-in download/restart update flow. See [RELEASES.md](RELEASES.md) for repository setup and publishing.
+A standalone Windows cockpit for **BeamNG.drive**, designed for the **Corsair XENEON EDGE (2560 × 720)** and other secondary displays. 
 
 Model S uses a dark speed/RPM cluster with a forward-facing rear-view illustration while driving and the matching BeamNG model preview in P. Studio backgrounds are removed from local previews. Model Three combines a light vehicle panel with live roads, buildings and navigation on the right. Both retain the shared music player, visualizer. Images come from installed BeamNG model previews, including supported mods: paint and custom parts may differ, and a rear view or live 3D model is not available. Missing previews show a neutral illustration. No companion reload is needed.
 
 ## Start the app
 
-Use `dist/DriveDeck-0.16.1-portable.exe` when available. Close an older DriveDeck instance first. It runs without installing Node.js. The portable launcher extracts the app temporarily; the app saves preferences under `%APPDATA%/drivedeck/settings.json`.
-
-Version 0.5.1 fixes missing animated covers when iTunes search returns a different release from Apple Music. Discovery now also checks matching streaming editions from the artist’s public catalog, verifies the album title and artist, and skips unavailable editions. Verified with *The Melodic Blue* and *Graduation*.
-
-For development, install Node.js 22 or later, then run:
-
-```powershell
-npm install
-npm start
-```
 
 Open **Display** (monitor icon), select your Edge, and the cockpit opens fullscreen there. **F11** toggles fullscreen; **Escape** returns to a window. Ultra/Vivace fullscreen hides the app chrome; move the pointer to the top edge to reveal the deck selector and controls. The display selection is remembered.
 
@@ -69,10 +59,7 @@ OutGauge supplies speed, engine RPM, gear, fuel fraction, coolant/oil temperatur
 - **Sport:** adds a segmented RPM strip and a shift indication at the configured redline.
 - **Focus:** full-width instruments.
 - **Themes:** AURA (original), ETK, Hirochi, Ibishu, and independent BMW-, Porsche-, and Ferrari-inspired interpretations.
-- **Custom marque:** your own name and signature color.
-- **Widgets:** hide, show, and reorder Now Playing, Vehicle Profile, and This Drive.
-- **Instruments:** choose MPH/KM/H, RPM scale, redline, and dashboard brightness.
-- **Setup files:** export/import all customization as a validated JSON file.
+
 
 Layouts and card order are configurable. This version does not include an arbitrary drag-and-resize canvas editor. Brand-inspired profiles use original artwork and lettering. DriveDeck is an independent app with no Apple CarPlay or vehicle manufacturer integration. It does not import SignalRGB’s content library; SignalRGB remains a separate app you can switch back to.
 
@@ -100,23 +87,6 @@ Apple page extraction is experimental and may stop working if Apple changes its 
 
 HLS playback uses [hls.js](https://github.com/video-dev/hls.js) (Apache-2.0); the bundled license is `src/renderer/vendor/hls-LICENSE.txt`.
 
-## Automatic vehicle / brand matching
-
-The standard OutGauge `car` field is always `beam`, so it cannot identify your vehicle. An **optional companion mod** is included in `beamng/`. Open that folder from the app’s Connect tab for installation instructions.
-
-The companion uses BeamNG’s custom protocol mechanism (0.32+, checked against installed 0.40.4), and adds vehicle identity, RPM limit, drive mode, and map data. Saved theme mappings match vehicle IDs to themes; specific user keywords take precedence over general ones. Examples:
-
-| Vehicle ID / keyword | Theme |
-| --- | --- |
-| `etk800`, `etkc`, `etki` | ETK |
-| `sunburst`, `sbr` | Hirochi |
-| `covet`, `200bx`, `bx`, `pessima`, `miramar`, `pigeon`, `wigeon`, `hopper` | Ibishu |
-| `bmw`, `porsche`, `ferrari` | Corresponding inspired theme |
-| Your keyword | Any theme, including Custom |
-
-Modded vehicles have arbitrary folder names. Add their keywords in **Design → Vehicle → theme mappings**. Enable **Match the vehicle automatically**. Selecting a theme manually turns automatic matching off. The manual choice is the fallback for an unmatched car.
-
-The companion's Lua modules are tested against API mocks, and its packets, map assembly, and live mode changes are covered by UDP/Electron checks. A live session remains a separate compatibility check. Standard OutGauge does not require this mod. The configured redline remains a user setting.
 
 ## Windows media
 
@@ -126,30 +96,7 @@ Start playback in Spotify, a browser exposing a Windows media session, or anothe
 
 The helper was checked against a real local Spotify session for metadata and artwork. Automated UI tests use silent demo media and do not change the user’s playback. Company policy that disables PowerShell or Windows media access can prevent this feature; vehicle instruments still work.
 
-## Development and verification
 
-```powershell
-npm test                 # Packet decoder, settings, UDP, theme mapping, units/trip
-npm run smoke            # Real Electron UI + UDP tests and screenshots
-node scripts/check-media.cjs  # Read-only Windows media startup check
-npm run preview          # Browser design preview on localhost:4173; simulated data only
-npm run package          # Unpacked Windows executable
-npm run portable         # Portable Windows executable
-```
-
-The smoke test isolates its settings in `.runtime/smoke`, uses a temporary UDP port, and writes `artifacts/smoke-report.json` plus screenshots. It covers telemetry delivery and expiration, automatic marque selection, theme/custom name persistence, silent demo controls, layouts, units, widget order, and the Edge resolution. Set `DRIVEDECK_DATA_DIR` to override the settings folder during development.
-
-## Source layout
-
-- `src/main.cjs` — desktop window, display selection, settings persistence, IPC.
-- `src/lib/telemetry.cjs` — localhost UDP listener, OutGauge and companion decoders.
-- `src/lib/media.cjs`, `native/media.ps1` — Windows media bridge.
-- `src/renderer/` — local-only dashboard UI, themes, demo, and trip model.
-- `beamng/drivedeck/` — optional vehicle identity protocol.
-
-The renderer uses context isolation, a sandbox, no Node.js integration, a restrictive content security policy, and specific IPC methods. The app fetches optional Apple artwork using song metadata. There are no analytics, game memory hooks or vehicle telemetry uploads. Import files and UDP packets are size/field validated.
-
-## References
 
 - [BeamNG: OutGauge and custom protocols](https://docs.beamng.com/modding/protocols/)
 - [Microsoft: Windows global media sessions](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
@@ -159,7 +106,7 @@ DriveDeck’s original code and artwork are provided under the MIT license in `L
 
 Map appearance: open Design → Live map → Map appearance to choose Dark or Light. Dark is the default for new and existing profiles. This choice follows Glass, Atlas and Pure and is saved with your settings. The +/− buttons zoom the map in every map deck. No companion reload is needed for this update.
 
-Version 0.9 adds **iadnuyh**, a photo-inspired blue/orange instrument deck with live speed, RPM, gear, fuel, coolant temperature, ambient temperature, odometer and heading compass. Select iadnuyh in the deck menu. Missing vehicle fields show a dash; the center reports active navigation without inventing turn instructions or speed limits. The shared mini player supports visualizer.
+Version 0.9 adds **iadnuyh**, a Hyundai Santa Cruz blue/orange instrument deck with live speed, RPM, gear, fuel, coolant temperature, ambient temperature, odometer and heading compass. Select iadnuyh in the deck menu. Missing vehicle fields show a dash; the center reports active navigation without inventing turn instructions or speed limits. The shared mini player supports visualizer.
 
 Version 0.10 adds **Luce**, a separate three-dial analog deck based on the supplied reference: large central speedometer, orange needles, yellow scale markings, smaller tachometer, fuel arc, gear, trip and coolant readings, plus the shared visualizer mini player. The right dial estimates planar G from speed and heading when both live feeds are available; this is not direct vehicle accelerometer telemetry. Missing or stale signals blank the readings.
 
