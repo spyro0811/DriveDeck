@@ -42,3 +42,8 @@ BeamNG companion files ship in every installer. Users can update the game compan
 The local no-feed Setup can be built before your repository exists; public update delivery cannot be exercised until a real feed has two published versions. Test that path in a VM: install version A, publish version B, launch A, download B, then restart and verify settings/artwork persist. Never use someone else's repository as a test update feed.
 
 Current builds are unsigned, matching the existing portable distribution. Windows may show an unknown-publisher/SmartScreen prompt. Before wider distribution, configure a code-signing identity in electron-builder and CI secrets; keep using that identity for later updates. Do not disable update checksum verification. The pinned electron-updater 6 / electron-builder 26 combination supports NSIS updates; review migration requirements before upgrading either major version.
+
+
+## Patch notes in updates (0.20.0 and later)
+
+Edit src/release-notes.json with the version and user-facing notes before building. The build embeds these notes into latest.yml, and the release workflow uses them for the GitHub release body. Update notices display plain-text patch notes during download and restart readiness. After upgrading, existing users see What’s new once; Display → View patch notes can reopen it. Older installed clients still use their existing prompt to get the new installer, then see the new notes window after upgrading. The old interface itself cannot change before the update is installed.

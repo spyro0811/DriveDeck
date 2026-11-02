@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('driveDeck', {
   mobileStatus: () => ipcRenderer.invoke('mobile:status'),
   startMobile: () => ipcRenderer.invoke('mobile:start'),
   stopMobile: () => ipcRenderer.invoke('mobile:stop'),
+  acknowledgeReleaseNotes: () => ipcRenderer.invoke('release:acknowledge'),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),

@@ -60,6 +60,8 @@ jobs:
         working-directory: ${{ env.DD_DIR }}
         shell: pwsh
         run: |
+          $notesFile = Join-Path $env:RUNNER_TEMP 'drivedeck-release-notes.md'
+          node -e "process.stdout.write(require('./src/release-notes.json').notes)" | Set-Content -Encoding utf8 $notesFile
           $tag = "v$env:DD_VERSION"
           $repo = $env:DRIVEDECK_RELEASE_REPOSITORY
           $assets = @("dist/DriveDeck-Setup-$env:DD_VERSION.exe", "dist/DriveDeck-Setup-$env:DD_VERSION.exe.blockmap", 'dist/latest.yml')
@@ -69,11 +71,13 @@ jobs:
             if (!(($release | ConvertFrom-Json).isDraft)) { throw 'This version is already published. Bump the version; published releases are never overwritten.' }
           } else {
             if ($repo -eq $env:GITHUB_REPOSITORY) {
-              gh release create $tag --repo $repo --target $env:GITHUB_SHA --draft --title "DriveDeck $env:DD_VERSION" --notes 'Add release notes before publishing.'
+              gh release create $tag --repo $repo --target $env:GITHUB_SHA --draft --title "DriveDeck $env:DD_VERSION" --notes-file $notesFile
             } else {
-              gh release create $tag --repo $repo --draft --title "DriveDeck $env:DD_VERSION" --notes 'Add release notes before publishing.'
+              gh release create $tag --repo $repo --draft --title "DriveDeck $env:DD_VERSION" --notes-file $notesFile
             }
             if ($LASTEXITCODE -ne 0) { throw 'Could not create draft release.' }
           }
+          gh release edit $tag --repo $repo --notes-file $notesFile
+          if ($LASTEXITCODE -ne 0) { throw 'Could not save release notes.' }
           gh release upload $tag @assets --repo $repo --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload release artifacts.' }

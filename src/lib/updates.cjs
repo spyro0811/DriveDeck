@@ -1,4 +1,5 @@
 const { EventEmitter } = require('node:events');
+const { releaseNotes } = require('./release-notes.cjs');
 // Only the repository baked into the signed/reviewed build may supply updates.
 function validRepository(value) {
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/.test(value) && !value.endsWith('/.') && !value.endsWith('/..');
@@ -6,7 +7,7 @@ function validRepository(value) {
 class Updates extends EventEmitter {
   constructor({ updater, version, repository, packaged, portable, disabled = false }) {
     super(); this.updater = updater; this.repository = validRepository(repository) ? repository : null;
-    this.state = { status: 'idle', currentVersion: version, version: null, percent: 0, message: '' };
+    this.state = { status: 'idle', currentVersion: version, version: null, percent: 0, message: '', releaseNotes:'' };
     if (disabled || !packaged) this.state = {...this.state, status:'disabled', message:'Update checks are disabled in development and test builds.'};
     else if (!this.repository) this.state = {...this.state, status:'disabled', message:'This build is not connected to a release repository yet.'};
     else if (portable) this.state = {...this.state, status:'manual', message:'Portable edition: install the latest Setup edition for automatic updates.'};
@@ -14,8 +15,8 @@ class Updates extends EventEmitter {
     updater.autoDownload = false; updater.autoInstallOnAppQuit = false;
     updater.disableWebInstaller = true;
     updater.allowPrerelease = false; updater.allowDowngrade = false;
-    updater.on('update-available', info => this.set({status:'available',version:String(info.version).slice(0,64),percent:0,message:'A new version of DriveDeck is available.'}));
-    updater.on('update-not-available', () => this.set({status:'idle',version:null,message:'You’re up to date.'}));
+    updater.on('update-available', info => this.set({status:'available',version:String(info.version).slice(0,64),releaseNotes:releaseNotes(info.releaseNotes),percent:0,message:'A new version of DriveDeck is available.'}));
+    updater.on('update-not-available', () => this.set({status:'idle',version:null,releaseNotes:'',message:'You’re up to date.'}));
     updater.on('download-progress', info => this.set({status:'downloading',percent:Math.max(0,Math.min(100,Number(info.percent)||0))}));
     updater.on('update-downloaded', () => this.set({status:'downloaded',percent:100,message:'Ready to restart and install. Your settings will be kept.'}));
     updater.on('error', () => this.fail());

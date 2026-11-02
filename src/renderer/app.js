@@ -371,7 +371,7 @@ async function boot() {
   if(api.openMobileInstructions)$('mobile-instructions').onclick=()=>api.openMobileInstructions();
   if(api.mobileStatus){showMobile(await api.mobileStatus());$('mobile-toggle').onclick=async()=>{const button=$('mobile-toggle');button.disabled=true;try{showMobile(await (mobileRunning?api.stopMobile():api.startMobile()));}finally{button.disabled=false;}};}
   animationState=initial.animation||animationState;renderAnimationStatus();
-  updateView.render(initial.updates);
+  updateView.render(initial.updates);updateView.currentRelease=initial.currentRelease;if(initial.showInstalledNotes)updateView.showInstalled(initial.currentRelease);
   audioState = initial.audio || audioState;
   mapState = initial.map || mapState;
   $('app').dataset.fullscreen = String(!!fullscreen);

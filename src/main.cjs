@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, screen, dialog, shell, Menu } = require('el
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
+const currentRelease=require('./release-notes.json');
+const {shouldShowNotes}=require('./lib/release-notes.cjs');
+let showInstalledNotes=false,notesSeenFile;
 const { Updates } = require('./lib/updates.cjs');
 const { Telemetry } = require('./lib/telemetry.cjs');
 const { MobileServer } = require('./lib/mobile.cjs');
@@ -78,7 +81,8 @@ function registerHandlers() {
   handle('mobile:start',async()=>{try{return await pairingCodes(await mobile.start());}catch{await mobile.stop();return {running:false,links:[],error:'Could not start the phone dashboard. Try again.'};}});
   handle('mobile:stop',()=>mobile.stop());
   handle('mobile:instructions',async()=>{await shell.openExternal('https://drivedecks.app/mobile');return {ok:true};});
-  handle('app:bootstrap', () => ({ settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
+  handle('release:acknowledge',()=>{fs.writeFileSync(notesSeenFile,JSON.stringify({version:app.getVersion()}));showInstalledNotes=false;return {ok:true};});
+  handle('app:bootstrap', () => ({ currentRelease,showInstalledNotes,settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
   handle('updates:check', () => updates.check());
   handle('updates:download', () => updates.download());
   handle('updates:install', () => updates.install());
@@ -170,6 +174,10 @@ function registerHandlers() {
 
 async function createWindow() {
   settingsFile = path.join(app.getPath('userData'), 'settings.json');
+  notesSeenFile=path.join(app.getPath('userData'),'release-notes-seen.json');
+  const existingSettings=fs.existsSync(settingsFile);
+  showInstalledNotes=!smoke&&shouldShowNotes(notesSeenFile,app.getVersion(),existingSettings);
+  if(!existingSettings)fs.writeFileSync(notesSeenFile,JSON.stringify({version:app.getVersion()}));
   settings = readSettings(settingsFile);
   if(smoke)settings.animatedArtwork=false;
   animated=new AnimatedArtwork({library:new ClipLibrary(path.join(app.getPath('userData'),'animated-artwork'))});
