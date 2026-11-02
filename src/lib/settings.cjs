@@ -9,7 +9,7 @@ const DEFAULTS = Object.freeze({
   animatedArtwork: true, animationOrder: ['canvas','apple'], canvasEnabled: true, appleEnabled: true,
   miniPlayerView: 'visualizer', songVisualizer: false, audioView: 'artwork', mapZoom: 1, mapAppearance: 'dark', atlasView: '2d', mapTerrain: true, mapHeadingUp: true, demoDriveMode: 'comfort', civettaPage: 'auto',
   customName: 'YOUR MARQUE', accent: '#d5f38a', maxRpm: 8000, redline: 6500,
-  port: 4444, brightness: 100, alwaysOnTop: false, demo: false,
+  windowWidth:1560,windowHeight:650,port: 4444, brightness: 100, alwaysOnTop: false, demo: false,
   widgets: ['media', 'vehicle', 'journey'], displayId: null,
   brandMappings: { etk: 'etk', hirochi: 'hirochi', ibishu: 'ibishu', bmw: 'bmw', porsche: 'porsche', ferrari: 'ferrari' },
 });
@@ -49,7 +49,7 @@ function validateSettings(input = {}) {
     customName: typeof input.customName === 'string' && input.customName.trim() ? input.customName.trim().slice(0, 24) : DEFAULTS.customName,
     accent: typeof input.accent === 'string' && /^#[0-9a-f]{6}$/i.test(input.accent) ? input.accent : DEFAULTS.accent,
     maxRpm, redline: Math.min(maxRpm, number('redline', 500, 30000)),
-    port: number('port', 1024, 65535), brightness: number('brightness', 20, 100),
+    windowWidth:number('windowWidth',1000,7680),windowHeight:number('windowHeight',520,4320),port: number('port', 1024, 65535), brightness: number('brightness', 20, 100),
     alwaysOnTop: input.alwaysOnTop === true, demo: input.demo === true,
     displayId: Number.isInteger(input.displayId) ? input.displayId : null,
     widgets, brandMappings: mappings,

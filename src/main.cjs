@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { Updates } = require('./lib/updates.cjs');
 const { Telemetry } = require('./lib/telemetry.cjs');
+const { MobileServer } = require('./lib/mobile.cjs');
+const { pairingCodes } = require('./lib/mobile-qr.cjs');
 const { Audio } = require('./lib/audio.cjs');
 const { AnimatedArtwork, ClipLibrary, trackKey } = require('./lib/animated-artwork.cjs');
 const { Media } = require('./lib/media.cjs');
@@ -18,11 +20,12 @@ const pageUrl = pathToFileURL(page).href;
 const telemetry = new Telemetry();
 const media = new Media({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/media.ps1') : path.join(__dirname, '../native/media.ps1') });
 const audio = new Audio({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/audio.ps1') : path.join(__dirname, '../native/audio.ps1') });
-function syncAudio() { const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
+function syncAudio() { const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
 let animated, updates, updateTimer;
 let window, settings, settingsFile, ticker;
 let saveQueue = Promise.resolve();
 let quitting = false;
+const mobile = new MobileServer({root:__dirname,snapshot:()=>({settings:{units:settings.units,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
 
 function displays() {
   return screen.getAllDisplays().map((d, index) => ({
@@ -71,6 +74,10 @@ function queueSettings(patch) {
 }
 
 function registerHandlers() {
+  handle('mobile:status',()=>pairingCodes(mobile.status()));
+  handle('mobile:start',async()=>{try{return await pairingCodes(await mobile.start());}catch{await mobile.stop();return {running:false,links:[],error:'Could not start the phone dashboard. Try again.'};}});
+  handle('mobile:stop',()=>mobile.stop());
+  handle('mobile:instructions',async()=>{await shell.openExternal('https://drivedecks.app/mobile');return {ok:true};});
   handle('app:bootstrap', () => ({ settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
   handle('updates:check', () => updates.check());
   handle('updates:download', () => updates.download());
@@ -92,6 +99,7 @@ function registerHandlers() {
   handle('media:seek', seconds => media.command('seek',seconds));
   handle('media:command', action => media.command(action));
   handle('window:fullscreen', () => { window.setFullScreen(!window.isFullScreen()); return { ok: true }; });
+  handle('window:resolution',async(width,height)=>{if(!Number.isInteger(width)||!Number.isInteger(height)||width<1000||width>7680||height<520||height>4320)return {ok:false,error:'Choose a width from 1000–7680 and height from 520–4320.'};const result=await queueSettings({windowWidth:width,windowHeight:height});if(!result.ok)return result;const resize=()=>{if(window.isMaximized())window.unmaximize();window.setContentSize(width,height);window.center();};if(window.isFullScreen()){window.once('leave-full-screen',resize);window.setFullScreen(false);}else resize();return {ok:true,width,height};});
   handle('window:minimize', () => window.minimize());
   handle('window:close', () => window.close());
   handle('window:displays', displays);
@@ -171,7 +179,7 @@ async function createWindow() {
   catch (error) { telemetry.error = error.message; }
   const target = screen.getAllDisplays().find(d => d.id === settings.displayId);
   window = new BrowserWindow({
-    title: 'DriveDeck', width: 1560, height: 650, minWidth: 1000, minHeight: 520,
+    title: 'DriveDeck', width: settings.windowWidth, height: settings.windowHeight, minWidth: 1000, minHeight: 520,
     icon: path.join(__dirname, 'renderer/assets/icon.png'),
     show: false, backgroundColor: '#0b0d0c', frame: false, autoHideMenuBar: true,
     ...(target ? { x: target.workArea.x, y: target.workArea.y } : {}),
@@ -219,5 +227,6 @@ app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => {
   if (quitting) return;
   quitting = true;
+  void mobile.stop();
   clearTimeout(updateTimer); clearInterval(ticker); telemetry.close(); media.stop(); audio.stop(); animated?.stop();
 });

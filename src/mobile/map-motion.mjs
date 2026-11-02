@@ -1,0 +1,3 @@
+export class MapMotion {
+  update(pose,dt){if(!pose?.position){this.position=null;return {...pose};}const target=pose.position;if(!this.position||this.mapId!==pose.mapId||Math.hypot(target[0]-this.position[0],target[1]-this.position[1])>250){this.position=[...target];this.heading=pose.heading||0;}this.mapId=pose.mapId;const blend=1-Math.exp(-Math.min(.1,Math.max(0,dt))*22);this.position=this.position.map((v,i)=>v+(target[i]-v)*blend);const angle=((pose.heading||0)-this.heading+540)%360-180;this.heading=(this.heading+angle*blend+360)%360;return {...pose,position:this.position,heading:this.heading};}
+}

@@ -116,3 +116,16 @@ Version 0.15 map update: install/reload the companion for reported building heig
 Version 0.15.1 uses actual building-footprint coverage to give built-up blocks a neutral base instead of showing dirt/grass from underneath city meshes. This is a schematic map treatment, not exact land-use or park boundaries. Open terrain retains material colors. No companion reload is needed.
 
 Version 0.16.0 uses the supplied Bastion, Ardente, Vivace, Scintilla/Civetta, ETK, Pigeon, H-Series/Van and Hopper PNGs in both driving views. PNGs remain unchanged and transparent; SVG view boxes trim padding. Unsupported models retain a generic illustration. Ardente shares the Vivace platform folder: the updated companion identifies the selected body/configuration so its name, driving graphic, Park preview and automatic Vivace selection stay distinct. Reload the vehicle after installing the companion fix.
+
+
+## Phone dashboard preview
+
+In Settings → Connect, choose **Start phone dashboard**. Scan the QR code on a phone or tablet on the same Wi-Fi. Keep DriveDeck running on the PC; if Windows asks, allow the app on your private network. **View instructions** opens https://drivedecks.app/mobile.
+
+All twelve decks, live instruments, maps, vehicle previews and PC audio visualizers are available. Phone deck selection is independent of the PC. Music playback controls and animated covers are not included on the phone yet. Position updates use the faster dashboard feed, while unchanged map geometry stays cached.
+
+For manual pairing, use **Connect** on the phone and enter the PC address (including port) and eight-character code displayed below the QR. The phone exchanges the code for a full session key and remembers it. Incorrect attempts are limited. Sharing is off at startup; stopping it or closing DriveDeck revokes the connection. A new sharing session may use a different port and always creates a new code. If a Home Screen shortcut points to an old address, recreate it from the new QR link. The expanded dashboard hides its own toolbar; browser controls depend on the phone/browser.
+
+## Window resolution
+
+Settings → Display includes resolution presets and custom dimensions. Apply resolution exits fullscreen, changes the window size, and saves the size for next launch. These controls are included in the regular installer source as well as portable builds.

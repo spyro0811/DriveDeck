@@ -334,6 +334,9 @@ function bindEvents() {
   $('unit-button').onclick = () => { smoothSpeed = 0; void save({ units: settings.units === 'mph' ? 'kmh' : 'mph' }); };
   $('reset-trip').onclick = () => { (settings.demo ? demoTrip : liveTrip).reset(); toast('This drive has been reset.'); };
   $('media-toggle').onclick = () => playback('toggle'); $('media-next').onclick = () => playback('next'); $('media-previous').onclick = () => playback('previous');
+  $('resolution-preset').onchange=e=>{if(e.target.value==='custom')return;const [w,h]=e.target.value.split('x');$('resolution-width').value=w;$('resolution-height').value=h;};
+  for(const id of ['resolution-width','resolution-height'])$(id).oninput=()=>$('resolution-preset').value='custom';
+  $('resolution-apply').onclick=async()=>{if(!api.setResolution)return toast('Window resizing is available in the desktop app.',true);const result=await api.setResolution(Number($('resolution-width').value),Number($('resolution-height').value));toast(result.ok?'Window resolution applied.':result.error,!result.ok);};
   $('fullscreen-button').onclick = () => api.toggleFullscreen(); $('panel-fullscreen').onclick = () => api.toggleFullscreen();
   $('refresh-displays').onclick = refreshDisplays; $('minimize-button').onclick = () => api.minimize(); $('close-button').onclick = () => api.close();
   for (const [id, method, message] of [['export-settings', 'exportSettings', 'Setup exported.'], ['import-settings', 'importSettings', 'Setup imported.'], ['open-companion', 'openCompanion', null]]) {
@@ -363,11 +366,16 @@ async function boot() {
   api.onFullscreen(value => { fullscreen = value; $('app').dataset.fullscreen = String(value); $('fullscreen-button').innerHTML = `${icon('expand')} ${value ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}`; });
   const updateView=new UpdatesView(api);
   const initial = await api.bootstrap(); live = initial.telemetry || live; media = initial.media || media; displayList = initial.displays || []; fullscreen = initial.fullscreen;
+  let mobileRunning=false;
+  function showMobile(state){mobileRunning=!!state.running;$('mobile-toggle').textContent=mobileRunning?'Stop phone dashboard':'Start phone dashboard';$('mobile-links').replaceChildren();if(state.error)$('mobile-links').textContent=state.error;else if(mobileRunning){if(!state.codes?.length)$('mobile-links').textContent='Connect this PC to Wi-Fi or Ethernet, then restart sharing.';for(const code of state.codes||[]){const row=document.createElement('figure');row.className='mobile-pairing';const image=document.createElement('img');image.src=code.image;image.alt='Scan with your phone camera to open DriveDeck';image.width=320;image.height=320;const caption=document.createElement('figcaption');caption.textContent='PC address: '+code.address;const key=document.createElement('input');key.readOnly=true;key.value=code.pairingCode;key.setAttribute('aria-label','Phone pairing code');key.style.width='100%';key.onclick=()=>key.select();const keyLabel=document.createElement('p');keyLabel.textContent='Pairing code · enter this on the phone Connect screen';row.append(image,caption,keyLabel,key);$('mobile-links').append(row);}}}
+  if(api.openMobileInstructions)$('mobile-instructions').onclick=()=>api.openMobileInstructions();
+  if(api.mobileStatus){showMobile(await api.mobileStatus());$('mobile-toggle').onclick=async()=>{const button=$('mobile-toggle');button.disabled=true;try{showMobile(await (mobileRunning?api.stopMobile():api.startMobile()));}finally{button.disabled=false;}};}
   animationState=initial.animation||animationState;renderAnimationStatus();
   updateView.render(initial.updates);
   audioState = initial.audio || audioState;
   mapState = initial.map || mapState;
   $('app').dataset.fullscreen = String(!!fullscreen);
+  $('resolution-width').value=initial.settings.windowWidth||1560;$('resolution-height').value=initial.settings.windowHeight||650;const selectedSize=$('resolution-width').value+'x'+$('resolution-height').value;$('resolution-preset').value=[...$('resolution-preset').options].some(o=>o.value===selectedSize)?selectedSize:'custom';
   applySettings(initial.settings); text('app-version', `VERSION ${initial.version}`); bindEvents();
   $('app').dataset.ready = 'true'; requestAnimationFrame(frame);
 }

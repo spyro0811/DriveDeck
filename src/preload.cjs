@@ -5,6 +5,10 @@ const subscribe = channel => callback => {
   return () => ipcRenderer.removeListener(channel, handler);
 };
 contextBridge.exposeInMainWorld('driveDeck', {
+  openMobileInstructions: () => ipcRenderer.invoke('mobile:instructions'),
+  mobileStatus: () => ipcRenderer.invoke('mobile:status'),
+  startMobile: () => ipcRenderer.invoke('mobile:start'),
+  stopMobile: () => ipcRenderer.invoke('mobile:stop'),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
@@ -21,6 +25,7 @@ contextBridge.exposeInMainWorld('driveDeck', {
   onAnimation: subscribe('animation:state'),
   seekMedia: seconds => ipcRenderer.invoke('media:seek', seconds),
   mediaCommand: action => ipcRenderer.invoke('media:command', action),
+  setResolution: (width,height) => ipcRenderer.invoke('window:resolution',width,height),
   toggleFullscreen: () => ipcRenderer.invoke('window:fullscreen'),
   minimize: () => ipcRenderer.invoke('window:minimize'),
   close: () => ipcRenderer.invoke('window:close'),

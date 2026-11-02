@@ -6,11 +6,11 @@ import { drawPerspective } from './map-perspective.mjs';
 export class MapCanvas {
   constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.lastDraw = 0; this.roads = null; this.paths = []; }
   draw(map, settings, now) {
-    if (now - this.lastDraw < 65) return; this.lastDraw = now;
+    if (now - this.lastDraw < (settings.mobileMap?32:65)) return; this.lastDraw = now;
     const { canvas, ctx } = this;
     const rect = canvas.getBoundingClientRect(), w = rect.width, h = rect.height;
     if (!w || !h) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, settings.mobileMap?1.5:2);
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const dark = settings.mapAppearance !== 'light';

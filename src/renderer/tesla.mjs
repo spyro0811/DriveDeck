@@ -39,7 +39,7 @@ export class TeslaDecks{
  update({deck,settings,data,map,rpm,speed,now}){
   const id=data.connected&&!settings.demo?data.vehicleId:null,visual=vehicleVisual(data),identity=id?`${id}:${visual.key}`:null;if(identity!==this.identity){this.identity=identity;this.identityChanged(id);}
   const rear=!!id&&!!visual.asset;
-  for(const prefix of ['ms','mt']){this.ids[prefix+'-rear-asset'].toggleAttribute('hidden',!rear);this.ids[prefix+'-rear-fallback'].toggleAttribute('hidden',rear);if(rear&&this.rearKey!==visual.key){this.ids[prefix+'-rear-asset'].setAttribute('viewBox',visual.viewBox.join(' '));this.ids[prefix+'-rear-image'].setAttribute('href',`assets/vehicles/${visual.asset}.png`);this.ids[prefix+'-rear-image'].setAttribute('width',visual.width);this.ids[prefix+'-rear-image'].setAttribute('height',visual.height);}}
+  for(const prefix of ['ms','mt']){this.ids[prefix+'-rear-asset'].toggleAttribute('hidden',!rear);this.ids[prefix+'-rear-fallback'].toggleAttribute('hidden',rear);if(rear&&this.rearKey!==visual.key){this.ids[prefix+'-rear-asset'].setAttribute('viewBox',visual.viewBox.join(' '));this.ids[prefix+'-rear-image'].setAttribute('href',new URL(`./assets/vehicles/${visual.asset}.png`,import.meta.url).href);this.ids[prefix+'-rear-image'].setAttribute('width',visual.width);this.ids[prefix+'-rear-image'].setAttribute('height',visual.height);}}
   this.rearKey=visual.key;
   const p=deck==='model-s'?'ms':'mt',park=isParked(data),gear=data.connected?(data.selectedGear||gearLabel(data.gear)):'—';
   const name=data.connected?(visual.label||this.preview?.name||(!/^table:/.test(data.vehicleName||'')&&data.vehicleName)||data.vehicleId||'BeamNG vehicle'):'Waiting for BeamNG';

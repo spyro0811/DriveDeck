@@ -1,7 +1,7 @@
 {
   "name": "drivedeck",
   "productName": "DriveDeck",
-  "version": "0.18.1",
+  "version": "0.19.7",
   "description": "A customizable BeamNG.drive instrument cluster and Windows media dashboard.",
   "private": true,
   "author": "DriveDeck contributors",
@@ -24,7 +24,8 @@
     "electron-builder": "^26.18.0",
     "fengari": "^0.1.5",
     "hls.js": "^1.7.4",
-    "js-yaml": "4.3.2"
+    "js-yaml": "4.3.2",
+    "jsqr": "1.4.0"
   },
   "build": {
     "appId": "studio.drivedeck.desktop",
@@ -69,6 +70,7 @@
     }
   },
   "dependencies": {
-    "electron-updater": "6.8.11"
+    "electron-updater": "6.8.11",
+    "qrcode": "1.5.4"
   }
 }
