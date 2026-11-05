@@ -6,14 +6,8 @@ Open **Display** (monitor icon), select your Edge, and the cockpit opens fullscr
 
 Click the **play icon** to take a demo drive. Demo vehicle data, sample roads, artwork, and the silent sample track are explicitly labeled. The demo selector previews Comfort, Sport, Arsenic, ESC Off, and Offroad. Turn demo off to use actual telemetry and Windows media.
 
-## New decks
-
-- **Ultra Levels:** a dedicated six-bar music page between speed and RPM. Low frequencies are on the left; high frequencies are on the right.
-- **Ultra Sound:** MPH/KM/H and RPM instruments frame a selectable album-art or live visualizer center. The choice is remembered.
-- **Ultra Glass:** two large, clean instruments surrounding a map, with floating media controls.
-- **Ultra Atlas:** a full map with glass instrument panels.
-- **Ultra Pure:** a light cockpit with restrained blue and green instruments.
-- **Vivace S:** an original SVG recreation of the screenshot's reversed RPM dial, speedometer, fuel/coolant gauges, ambient temperature, gear, and mode illumination. Actual drive modes come from the game's controller; they are not inferred from RPM or driving style.
+## Exclusive Decks
+**Arch BTW** - A linux exclusive analog deck that reads "I use arch btw" in the middle. 
 
 Select decks from the top-left menu or Design. **Match Vivace automatically** optionally selects the replica when the companion reports a Vivace. Apple-inspired styling is original; DriveDeck does not include Apple software, Apple Maps, or a CarPlay connection.
 
