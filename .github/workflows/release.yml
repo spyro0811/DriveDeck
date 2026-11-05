@@ -1,4 +1,4 @@
-name: Build Windows release
+name: Build Windows and Linux release
 on:
   workflow_dispatch:
   push:
@@ -6,10 +6,12 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: windows-release-${{ github.ref }}
+  group: shared-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  release:
+  windows:
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     runs-on: windows-latest
     env:
       DRIVEDECK_RELEASE_REPOSITORY: ${{ vars.RELEASE_REPOSITORY || github.repository }}
@@ -28,6 +30,7 @@ jobs:
         working-directory: ${{ env.DD_DIR }}
         run: npm ci
       - name: Validate release version
+        id: version
         working-directory: ${{ env.DD_DIR }}
         shell: pwsh
         run: |
@@ -35,6 +38,7 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Public workflow requires a stable version.' }
           if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Git tag must match package.json version.' }
           "DD_VERSION=$version" >> $env:GITHUB_ENV
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Test
         working-directory: ${{ env.DD_DIR }}
         run: npm test
@@ -56,28 +60,38 @@ jobs:
             ${{ env.DD_DIR }}/dist/DriveDeck-Setup-*.exe.blockmap
             ${{ env.DD_DIR }}/dist/latest.yml
           if-no-files-found: error
-      - name: Create or update draft release
-        working-directory: ${{ env.DD_DIR }}
-        shell: pwsh
+  linux:
+    uses: ./.github/workflows/linux-release.yml
+    with:
+      build_only: true
+    secrets: inherit
+  draft:
+    needs: [windows, linux]
+    runs-on: ubuntu-24.04
+    env:
+      DD_VERSION: ${{ needs.windows.outputs.version }}
+      DRIVEDECK_RELEASE_REPOSITORY: ${{ vars.RELEASE_REPOSITORY || github.repository }}
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: DriveDeck-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create shared Windows and Linux draft
         run: |
-          $notesFile = Join-Path $env:RUNNER_TEMP 'drivedeck-release-notes.md'
-          node -e "process.stdout.write(require('./src/release-notes.json').notes)" | Set-Content -Encoding utf8 $notesFile
-          $tag = "v$env:DD_VERSION"
-          $repo = $env:DRIVEDECK_RELEASE_REPOSITORY
-          $assets = @("dist/DriveDeck-Setup-$env:DD_VERSION.exe", "dist/DriveDeck-Setup-$env:DD_VERSION.exe.blockmap", 'dist/latest.yml')
-          foreach ($asset in $assets) { if (!(Test-Path $asset)) { throw "Missing update artifact: $asset" } }
-          $release = gh release view $tag --repo $repo --json isDraft 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            if (!(($release | ConvertFrom-Json).isDraft)) { throw 'This version is already published. Bump the version; published releases are never overwritten.' }
-          } else {
-            if ($repo -eq $env:GITHUB_REPOSITORY) {
-              gh release create $tag --repo $repo --target $env:GITHUB_SHA --draft --title "DriveDeck $env:DD_VERSION" --notes-file $notesFile
-            } else {
-              gh release create $tag --repo $repo --draft --title "DriveDeck $env:DD_VERSION" --notes-file $notesFile
-            }
-            if ($LASTEXITCODE -ne 0) { throw 'Could not create draft release.' }
-          }
-          gh release edit $tag --repo $repo --notes-file $notesFile
-          if ($LASTEXITCODE -ne 0) { throw 'Could not save release notes.' }
-          gh release upload $tag @assets --repo $repo --clobber
-          if ($LASTEXITCODE -ne 0) { throw 'Could not upload release artifacts.' }
+          tag="v$DD_VERSION"
+          repo="$DRIVEDECK_RELEASE_REPOSITORY"
+          notes="$RUNNER_TEMP/shared-release-notes.md"
+          node -e "process.stdout.write(require('./src/release-notes.json').notes+'\n\n'+require('./src/release-notes-linux.json').notes)" > "$notes"
+          if gh release view "$tag" --repo "$repo" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            node -e "if(!require(process.env.RUNNER_TEMP+'/release.json').isDraft)process.exit(1)"
+          else
+            gh release create "$tag" --repo "$repo" --target "$GITHUB_SHA" --draft --title "DriveDeck $DD_VERSION" --notes-file "$notes"
+          fi
+          gh release edit "$tag" --repo "$repo" --notes-file "$notes"
+          for file in "DriveDeck-Setup-$DD_VERSION.exe" latest.yml "DriveDeck-$DD_VERSION-x64.AppImage" latest-linux.yml; do
+            test -s "release-assets/$file"
+          done
+          gh release upload "$tag" --repo "$repo" --clobber release-assets/*

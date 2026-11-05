@@ -31,7 +31,7 @@ Both apps must use the same UDP port (normally 4444). The existing companion is 
 
 ## Packages and updates
 
-`npm run linux:package` is prepared to build x64 AppImage and Debian packages on a Linux host. It is explicitly non-publishing and refuses to run on another OS. The Build Linux release workflow runs tests, builds packages, launches the actual AppImage under Xvfb with synthetic UDP input, validates checksums and uploads a draft. It is triggered manually or by linux-vVERSION tags. The Windows workflow is unchanged. Build outputs are experimental until tested on real distributions.
+`npm run linux:package` is prepared to build x64 AppImage and Debian packages on a Linux host. It is explicitly non-publishing and refuses to run on another OS. The Build Linux release workflow runs tests, builds packages, launches the actual AppImage under Xvfb with synthetic UDP input, validates checksums and uploads a draft. It is triggered manually or by linux-vVERSION tags. The shared release workflow reuses this Linux build when creating future Windows and Linux releases. Linux-only tags and manual Linux builds do not start Windows builds. Build outputs are experimental until tested on real distributions.
 
 AppImage builds support in-app update checks, explicit downloads and restart-to-install. Linux looks for published releases containing latest-linux.yml and an AppImage for its architecture, so a Windows-only release does not break Linux checks. Extracted portable and Debian builds update manually. Flatpak, RPM and ARM64 are not implemented. See LINUX-QUICKSTART.md for user instructions.
 

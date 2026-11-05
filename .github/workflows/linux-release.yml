@@ -1,6 +1,11 @@
 name: Build Linux release
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      build_only:
+        type: boolean
+        default: false
   push:
     tags: ['linux-v*']
 permissions:
@@ -15,6 +20,7 @@ jobs:
     env:
       DRIVEDECK_RELEASE_REPOSITORY: ${{ vars.RELEASE_REPOSITORY || github.repository }}
       GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+      DD_BUILD_ONLY: ${{ inputs.build_only || false }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +30,9 @@ jobs:
         run: |
           version=$(node -p "require('./package.json').version")
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "linux-v$version" ]]; then exit 1; fi
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "linux-v$version" ]]; then
+            [[ "$DD_BUILD_ONLY" == true && "$GITHUB_REF_NAME" == "v$version" ]] || exit 1
+          fi
           echo "DD_VERSION=$version" >> "$GITHUB_ENV"
       - name: Install Linux build and display dependencies
         run: |
@@ -49,6 +57,7 @@ jobs:
           cp LINUX-QUICKSTART.md dist/linux-unpacked/READ-ME-FIRST.md
           tar -C dist/linux-unpacked -czf "dist/DriveDeck-$DD_VERSION-linux-x64.tar.gz" .
           node scripts/verify-linux-release.cjs
+          cp LINUX-QUICKSTART.md dist/LINUX-QUICKSTART.md
       - name: Save Linux artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -59,10 +68,16 @@ jobs:
             dist/*-linux-x64.tar.gz
             dist/latest-linux.yml
             dist/SHA256SUMS.txt
-            LINUX-QUICKSTART.md
-            artifacts/linux/
+            dist/LINUX-QUICKSTART.md
+          if-no-files-found: error
+      - name: Save Linux UI check
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linux-UI-${{ env.DD_VERSION }}
+          path: artifacts/linux/
           if-no-files-found: error
       - name: Create Linux-only draft release
+        if: ${{ !inputs.build_only }}
         run: |
           tag="linux-v$DD_VERSION"
           repo="$DRIVEDECK_RELEASE_REPOSITORY"

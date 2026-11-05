@@ -46,7 +46,7 @@ Current builds are unsigned, matching the existing portable distribution. Window
 
 ## Linux-only release
 
-Bump package.json and package-lock.json together, and write src/release-notes-linux.json. Run **Build Linux release** manually on the matching source, or push a `linux-vVERSION` tag. The Windows workflow only responds to `vVERSION` tags and is not run by the Linux tag.
+Bump package.json and package-lock.json together, and write src/release-notes-linux.json. Run **Build Linux release** manually on the matching source, or push a `linux-vVERSION` tag. The shared Windows and Linux workflow responds to `vVERSION` tags and is not run by the Linux tag. For future shared releases it builds both platforms, waits for both to pass, and uploads one draft. This Linux-only workflow builds no Windows installer.
 
 The Linux workflow builds an AppImage, Debian package, portable tar archive, latest-linux.yml and checksums. It verifies the actual AppImage under Xvfb and creates a draft only after checks pass. Test the AppImage on Steam Deck before publishing. **Do not mark a Linux-only release as GitHub’s latest release**: existing Windows installations use that destination. Publish with the “Set as the latest release” checkbox unchecked (or `gh release edit linux-vVERSION --draft=false --latest=false`). Published releases are never overwritten.
 
