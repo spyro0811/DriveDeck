@@ -89,5 +89,6 @@
   "dependencies": {
     "electron-updater": "6.8.11",
     "qrcode": "1.5.4"
-  }
+  },
+  "homepage": "https://drivedecks.app"
 }
