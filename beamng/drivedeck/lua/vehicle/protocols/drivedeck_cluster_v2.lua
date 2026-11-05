@@ -14,6 +14,7 @@ end
 
 local function discover()
   local directory = vehiclePath or (v and v.data and v.data.vehicleDirectory) or ''
+  directory = tostring(directory):gsub('\\', '/'):gsub('/+$', '')
   vehicleId = directory:match('vehicles/([^/]+)') or directory
   local rawName = v and v.data and v.data.information and v.data.information.name
   if type(rawName)=='table' then rawName=rawName[1] or rawName.name end

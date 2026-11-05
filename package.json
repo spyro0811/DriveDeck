@@ -1,8 +1,8 @@
 {
   "name": "drivedeck",
   "productName": "DriveDeck",
-  "version": "0.20.0",
-  "description": "A customizable BeamNG.drive instrument cluster and Windows media dashboard.",
+  "version": "0.20.1",
+  "description": "A customizable BeamNG.drive instrument cluster and desktop media dashboard.",
   "private": true,
   "author": "DriveDeck contributors",
   "license": "MIT",
@@ -17,7 +17,8 @@
     "installer": "node scripts/build-release.cjs",
     "release:build": "node scripts/build-release.cjs --require-feed",
     "demo:build": "node scripts/build-demo.cjs",
-    "demo:serve": "node scripts/build-demo.cjs && node scripts/demo-server.cjs"
+    "demo:serve": "node scripts/build-demo.cjs && node scripts/demo-server.cjs",
+    "linux:package": "node scripts/build-linux.cjs"
   },
   "devDependencies": {
     "electron": "^45.1.0",
@@ -39,7 +40,8 @@
       "LICENSE",
       "scripts/smoke.cjs",
       "test/fixtures.cjs",
-      "package.json"
+      "package.json",
+      "scripts/smoke-linux.cjs"
     ],
     "extraResources": [
       {
@@ -67,6 +69,21 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Game",
+      "icon": "src/renderer/assets/icon.png",
+      "artifactName": "DriveDeck-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "recommends": [
+        "playerctl",
+        "pulseaudio-utils"
+      ]
     }
   },
   "dependencies": {

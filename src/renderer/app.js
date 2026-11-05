@@ -6,12 +6,13 @@ import { resolveTheme } from './themes.mjs';
 import { demoTelemetry, demoMedia } from './demo.mjs';
 import { clamp, speedInUnits, gearLabel, durationLabel, arcPath, Trip } from './model.mjs';
 import { previewApi } from './preview.mjs';
-import { DECKS, DeckView, resolveDeck } from './decks.mjs';
+import { DECKS, decksForPlatform, DeckView, resolveDeck } from './decks.mjs';
 import { demoMap } from './map.mjs';
 
 const $ = id => document.getElementById(id);
 const api = window.driveDeck || previewApi();
 const nodes = Object.fromEntries([...document.querySelectorAll('[id]')].map(el => [el.id, el]));
+let availableDecks=DECKS;
 let settings, live = { connected: false }, media = { available: false }, activeTheme;
 let animationState={source:'cover',url:null,providers:{}},classicMotion;
 let classicLevels;
@@ -44,7 +45,7 @@ async function save(patch, message) {
 }
 
 function deckCards() {
-  $('deck-grid').innerHTML = DECKS.map(deck => `<button class="deck-choice" data-deck-choice="${deck.id}" aria-label="Choose ${deck.name}"><img src="assets/decks/${deck.id}.png" alt="${deck.name} dashboard preview"><div><strong>${deck.name}</strong><small>${deck.note}</small></div></button>`).join('');
+  $('deck-grid').innerHTML = availableDecks.map(deck => `<button class="deck-choice" data-deck-choice="${deck.id}" aria-label="Choose ${deck.name}"><img src="assets/decks/${deck.id}.png" alt="${deck.name} dashboard preview"><div><strong>${deck.name}</strong><small>${deck.note}</small></div></button>`).join('');
 }
 
 // Preserve legacy saved widget layouts without exposing retired customization controls.
@@ -83,7 +84,7 @@ function applySettings(next) {
   if (demoChanged) { smoothRpm = 0; smoothSpeed = 0; lastMediaRender = ''; }
   $('app').dataset.layout = settings.layout;
   $('app').dataset.deck = settings.deck;
-  text('deck-library-name',DECKS.find(d=>d.id===settings.deck)?.name||'Deck library');
+  text('deck-library-name',availableDecks.find(d=>d.id===settings.deck)?.name||'Deck library');
   $('auto-deck').checked = settings.autoDeck;
   $('demo-drive-mode').value = settings.demoDriveMode;
   $('demo-mode-control').hidden = !settings.demo;
@@ -310,7 +311,7 @@ function bindEvents() {
   $('map-heading').onchange = event => save({ mapHeadingUp: event.target.checked });
   $('map-zoom').onchange = event => save({ mapZoom: Number(event.target.value) });
   $('deck-design-button').onclick = () => openPanel('themes'); $('deck-connect-button').onclick = () => openPanel('connection'); $('deck-display-button').onclick = () => openPanel('display'); $('deck-demo-button').onclick = () => save({ demo: !settings.demo });
-  $('install-companion').onclick = async () => { const result=await api.installCompanion(); if(result.ok)toast('Companion installed. Enable Other UDP protocols in BeamNG and restart the game.');else if(!result.canceled)toast(result.error,true); };
+  $('install-companion').onclick = async () => { const result=await api.installCompanion(); if(result.ok){const status=$('companion-install-status');status.hidden=false;status.style.overflowWrap='anywhere';status.textContent='Installed: '+(result.installedTo||'BeamNG mods folder')+'. Fully restart BeamNG, enable this mod in Mod Manager, and enable Other UDP protocols.';toast('Companion installed. Fully restart BeamNG and enable Other UDP protocols.');}else if(!result.canceled)toast(result.error,true); };
   $('themes-button').onclick = () => openPanel('themes'); $('brand-button').onclick = () => openPanel('themes');
   $('settings-button').onclick = () => openPanel('connection'); $('connection-button').onclick = () => openPanel('connection');
   $('media-view-button').onclick = () => openPanel('connection'); $('display-button').onclick = () => openPanel('display');
@@ -376,7 +377,7 @@ async function boot() {
   mapState = initial.map || mapState;
   $('app').dataset.fullscreen = String(!!fullscreen);
   $('resolution-width').value=initial.settings.windowWidth||1560;$('resolution-height').value=initial.settings.windowHeight||650;const selectedSize=$('resolution-width').value+'x'+$('resolution-height').value;$('resolution-preset').value=[...$('resolution-preset').options].some(o=>o.value===selectedSize)?selectedSize:'custom';
-  applySettings(initial.settings); text('app-version', `VERSION ${initial.version}`); bindEvents();
+  availableDecks=decksForPlatform(initial.platform);deckCards();applySettings(initial.settings); text('app-version', `VERSION ${initial.version}${initial.platform==='linux'?' · LINUX EXPERIMENTAL':''}`); bindEvents();
   $('app').dataset.ready = 'true'; requestAnimationFrame(frame);
 }
 boot().catch(error => { console.error(error); toast(`DriveDeck could not start: ${error.message}`, true); });

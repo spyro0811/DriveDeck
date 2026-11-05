@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, dialog, shell, Menu } = require('el
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
-const currentRelease=require('./release-notes.json');
+const currentRelease=require(process.platform==='linux'?'./release-notes-linux.json':'./release-notes.json');
 const {shouldShowNotes}=require('./lib/release-notes.cjs');
 let showInstalledNotes=false,notesSeenFile;
 const { Updates } = require('./lib/updates.cjs');
@@ -16,7 +16,8 @@ const { VehiclePreview } = require('./lib/vehicle-preview.cjs');
 const vehiclePreviews = new VehiclePreview();
 const { readSettings, writeSettings, validateSettings } = require('./lib/settings.cjs');
 
-const smoke = process.argv.includes('--smoke-test');
+const smokeLinux=process.argv.includes('--linux-smoke-test');
+const smoke = smokeLinux||process.argv.includes('--smoke-test');
 if (smoke || process.env.DRIVEDECK_DATA_DIR) app.setPath('userData', path.resolve(process.env.DRIVEDECK_DATA_DIR || path.join(__dirname, '..', '.runtime/smoke')));
 const page = path.join(__dirname, 'renderer/index.html');
 const pageUrl = pathToFileURL(page).href;
@@ -82,7 +83,7 @@ function registerHandlers() {
   handle('mobile:stop',()=>mobile.stop());
   handle('mobile:instructions',async()=>{await shell.openExternal('https://drivedecks.app/mobile');return {ok:true};});
   handle('release:acknowledge',()=>{fs.writeFileSync(notesSeenFile,JSON.stringify({version:app.getVersion()}));showInstalledNotes=false;return {ok:true};});
-  handle('app:bootstrap', () => ({ currentRelease,showInstalledNotes,settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
+  handle('app:bootstrap', () => ({ platform:process.platform,currentRelease,showInstalledNotes,settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
   handle('updates:check', () => updates.check());
   handle('updates:download', () => updates.download());
   handle('updates:install', () => updates.install());
@@ -139,13 +140,13 @@ function registerHandlers() {
     return error ? { ok: false, error } : { ok: true };
   });
   handle('beamng:install', async () => {
-    const result = await dialog.showOpenDialog(window, {
-      title: 'Choose the BeamNG user folder shown by your launcher',
-      defaultPath: path.join(app.getPath('home'), 'AppData/Local/BeamNG/BeamNG.drive/current'),
-      properties: ['openDirectory'], buttonLabel: 'Install companion here',
-    });
-    if (result.canceled) return { ok: false, canceled: true };
-    const root = result.filePaths[0];
+    const locations=require('./lib/platform-paths.cjs').platformPaths();
+    let root;
+    if(process.platform==='linux'){
+      const folders=(await require('./lib/beamng-folders.cjs').beamngFolders()).slice(0,6);
+      if(folders.length){const choice=await dialog.showMessageBox(window,{type:'question',title:'Choose your BeamNG installation',message:'Which version of BeamNG are you running?',detail:folders.map((folder,index)=>`${index+1}. ${folder.kind}\n${folder.root}`).join('\n\n')+'\n\nChoose Proton if you selected Proton in Steam compatibility settings. Select the same Steam library as the game.',buttons:[...folders.map((folder,index)=>`${index+1}. ${folder.kind}`),'Browse for another folder…','Cancel'],defaultId:0,cancelId:folders.length+1});if(choice.response===folders.length+1)return {ok:false,canceled:true};if(choice.response<folders.length)root=folders[choice.response].root;}
+    }
+    if(!root){const result=await dialog.showOpenDialog(window,{title:'Choose the active BeamNG user folder (not its mods folder)',defaultPath:locations.user,properties:['openDirectory'],buttonLabel:'Install companion here'});if(result.canceled)return {ok:false,canceled:true};root=result.filePaths[0];}
     if (!fs.existsSync(path.join(root, 'settings')) && !fs.existsSync(path.join(root, 'beamng.log'))) return { ok: false, error: 'Choose the BeamNG user folder, containing settings or beamng.log.' };
     const source = app.isPackaged ? path.join(process.resourcesPath, 'beamng/drivedeck-companion.zip') : path.join(__dirname, '../beamng/drivedeck-companion.zip');
     const target = path.join(root, 'mods/drivedeck-companion.zip');
@@ -164,7 +165,7 @@ function registerHandlers() {
         }
       }
       fs.renameSync(`${target}.tmp`, target);
-      return { ok: true };
+      return { ok: true,installedTo:target };
     } catch (error) {
       for (const [previous, destination] of moved.reverse()) { try { fs.renameSync(destination, previous); } catch {} }
       return { ok: false, error: error.message };
@@ -187,7 +188,7 @@ async function createWindow() {
   catch (error) { telemetry.error = error.message; }
   const target = screen.getAllDisplays().find(d => d.id === settings.displayId);
   window = new BrowserWindow({
-    title: 'DriveDeck', width: settings.windowWidth, height: settings.windowHeight, minWidth: 1000, minHeight: 520,
+    title: 'DriveDeck', width: process.platform==='linux'?Math.min(settings.windowWidth,screen.getPrimaryDisplay().workAreaSize.width):settings.windowWidth, height: process.platform==='linux'?Math.min(settings.windowHeight,screen.getPrimaryDisplay().workAreaSize.height):settings.windowHeight, minWidth: 1000, minHeight: 520,
     icon: path.join(__dirname, 'renderer/assets/icon.png'),
     show: false, backgroundColor: '#0b0d0c', frame: false, autoHideMenuBar: true,
     ...(target ? { x: target.workArea.x, y: target.workArea.y } : {}),
@@ -205,7 +206,7 @@ async function createWindow() {
     if (input.key === 'F11') { event.preventDefault(); window.setFullScreen(!window.isFullScreen()); }
     if (input.key === 'Escape' && window.isFullScreen()) { event.preventDefault(); window.setFullScreen(false); }
   });
-  updates = new Updates({updater:require('electron-updater').autoUpdater,version:app.getVersion(),repository:require('../package.json').releaseRepository,packaged:app.isPackaged,portable:!!process.env.PORTABLE_EXECUTABLE_DIR,disabled:smoke||!!process.env.DRIVEDECK_DATA_DIR});
+  updates = new Updates({updater:process.platform==='win32'?require('electron-updater').autoUpdater:process.platform==='linux'&&process.env.APPIMAGE?new (require('electron-updater').AppImageUpdater)():null,version:app.getVersion(),repository:require('../package.json').releaseRepository,packaged:app.isPackaged,portable:!!process.env.PORTABLE_EXECUTABLE_DIR,disabled:smoke||!!process.env.DRIVEDECK_DATA_DIR});
   updates.on('state', state => send('updates:state',state));
   registerHandlers();
   audio.on('state', state => send('audio:state', state));
@@ -221,7 +222,7 @@ async function createWindow() {
     window.show();
     if (target) window.setFullScreen(true);
   } else {
-    await require('../scripts/smoke.cjs').run({ app, window, telemetry, media, settingsFile });
+    await require(smokeLinux?'../scripts/smoke-linux.cjs':'../scripts/smoke.cjs').run({ app, window, telemetry, media, settingsFile });
   }
 }
 

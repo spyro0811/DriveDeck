@@ -23,16 +23,16 @@ async function zipEntries(file,names){
 }
 async function smallFile(file){const s=await fs.stat(file);if(s.size>8*1024*1024)throw Error('Preview too large');return fs.readFile(file);}
 async function discoverRoots(){
- const steam=path.join(process.env['ProgramFiles(x86)']||'C:/Program Files (x86)','Steam'),libraries=[steam];
- try{const text=await fs.readFile(path.join(steam,'steamapps/libraryfolders.vdf'),'utf8');for(const m of text.matchAll(/"path"\s+"([^"]+)"/g))libraries.push(m[1].replace(/\\\\/g,'\\'));}catch{}
- const user=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData/Local'),'BeamNG/BeamNG.drive/current');
- return {archives:[...new Set(libraries)].map(p=>path.join(p,'steamapps/common/BeamNG.drive/content/vehicles')),mods:path.join(user,'mods')};
+ const {platformPaths}=require('./platform-paths.cjs'),{steamLibraries,beamngFolders}=require('./beamng-folders.cjs'),locations=platformPaths(),libraries=await steamLibraries(locations);
+ const archives=libraries.map(p=>path.join(p,'steamapps/common/BeamNG.drive/content/vehicles'));if(locations.game)archives.unshift(path.join(locations.game,'content/vehicles'));
+ const folders=process.platform==='linux'?await beamngFolders({locations}):[];
+ return {archives,mods:path.join(folders[0]?.root||locations.user,'mods')};
 }
 class VehiclePreview{
- constructor(roots){this.roots=roots?Promise.resolve(roots):discoverRoots();this.cache=new Map();}
- get(id,vehicleName=''){const variant=id==='vivace'&&/\bardente\b/i.test(vehicleName)?'ardente':'';const key=id+':'+variant;if(!validId(id))return Promise.resolve({id:null,image:null});if(!this.cache.has(key)){if(this.cache.size>=64)this.cache.delete(this.cache.keys().next().value);this.cache.set(key,this.load(id,variant).catch(()=>({id,image:null})));}return this.cache.get(key);}
+ constructor(roots){this.explicitRoots=!!roots;this.roots=roots?Promise.resolve(roots):discoverRoots();this.cache=new Map();}
+ get(id,vehicleName=''){const variant=id==='vivace'&&/\bardente\b/i.test(vehicleName)?'ardente':'';const key=id+':'+variant;if(!validId(id))return Promise.resolve({id:null,image:null});if(!this.cache.has(key)){if(this.cache.size>=64)this.cache.delete(this.cache.keys().next().value);this.cache.set(key,this.load(id,variant).catch(()=>({id,image:null})).then(result=>{if(!result.image)this.cache.delete(key);return result;}));}return this.cache.get(key);}
  async load(id,variant=''){
-  const roots=await this.roots,prefix=`vehicles/${id}/`,names=[variant==='ardente'?'ardente_S_410Q_DCT.jpg':'default.jpg',variant==='ardente'?'ardente_S_410Q_DCT.png':'default.png','info.json'].map(n=>prefix+n);
+  const roots=await (this.explicitRoots?this.roots:discoverRoots()),prefix=`vehicles/${id}/`,names=[variant==='ardente'?'ardente_S_410Q_DCT.jpg':'default.jpg',variant==='ardente'?'ardente_S_410Q_DCT.png':'default.png','info.json'].map(n=>prefix+n);
   const readZip=async file=>{try{return await zipEntries(file,names)}catch{return {}}};let entries={};
   // Unpacked mods take priority; zip mods may also supply a model preview.
   if(roots.mods){try{for(const d of (await fs.readdir(path.join(roots.mods,'unpacked'),{withFileTypes:true})).slice(0,500))if(d.isDirectory())for(const name of names)try{entries[name]=await smallFile(path.join(roots.mods,'unpacked',d.name,name));}catch{}}catch{}}

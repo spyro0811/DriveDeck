@@ -4,9 +4,9 @@ const { EventEmitter } = require('node:events');
 const EMPTY = { available: false, title: '', artist: '', album: '', playing: false, position: 0, duration: 0, artwork: null, canToggle: false, canNext: false, canPrevious: false, canSeek: false };
 
 class Media extends EventEmitter {
-  constructor({ scriptPath = path.join(__dirname, '../../native/media.ps1') } = {}) { super(); this.scriptPath = scriptPath; this.state = { ...EMPTY }; this.child = null; this.pending = new Map(); this.id = 0; }
+  constructor(options = {}) { super(); if((options.platform||process.platform)==='linux')return new (require('./linux-media.cjs').LinuxMedia)(options); this.scriptPath = options.scriptPath||path.join(__dirname, '../../native/media.ps1'); this.state = { ...EMPTY }; this.child = null; this.pending = new Map(); this.id = 0; }
   start() {
-    if (process.platform !== 'win32') { this.state.error = 'Windows media sessions are available in the Windows app.'; return; }
+    if (process.platform !== 'win32') { this.state.error = 'Music integration is not available on this platform.'; return; }
     if (this.child) return;
     const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', this.scriptPath], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;

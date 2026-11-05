@@ -14,7 +14,7 @@ const DEFAULTS = Object.freeze({
   brandMappings: { etk: 'etk', hirochi: 'hirochi', ibishu: 'ibishu', bmw: 'bmw', porsche: 'porsche', ferrari: 'ferrari' },
 });
 
-function validateSettings(input = {}) {
+function validateSettings(input = {}, {platform=process.platform} = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) input = {};
   const number = (name, min, max) => typeof input[name] === 'number' && Number.isFinite(input[name])
     ? Math.round(Math.max(min, Math.min(max, input[name]))) : DEFAULTS[name];
@@ -30,7 +30,7 @@ function validateSettings(input = {}) {
     animatedArtwork: input.animatedArtwork !== false,
     animationOrder: Array.isArray(input.animationOrder) && input.animationOrder[0] === 'apple' ? ['apple','canvas'] : ['canvas','apple'],
     canvasEnabled: input.canvasEnabled !== false, appleEnabled: input.appleEnabled !== false,
-    deck: DECKS.includes(input.deck) ? input.deck : DEFAULTS.deck,
+    deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')) ? input.deck : DEFAULTS.deck,
     songVisualizer: input.songVisualizer === true,
     miniPlayerView: 'visualizer',
     audioView: input.audioView === 'visualizer' ? 'visualizer' : 'artwork',

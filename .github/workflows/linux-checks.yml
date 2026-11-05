@@ -1,0 +1,17 @@
+name: Experimental Linux source checks
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm test
+      - name: Render the source UI under a virtual display
+        run: xvfb-run -a node_modules/.bin/electron scripts/check-settings.cjs

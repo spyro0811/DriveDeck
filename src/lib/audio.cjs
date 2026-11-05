@@ -5,7 +5,7 @@ function validateBands(value) {
   return Array.isArray(value) && value.length === 32 && value.every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1) ? value : null;
 }
 class Audio extends EventEmitter {
-  constructor({ scriptPath = path.join(__dirname, '../../native/audio.ps1') } = {}) { super(); this.scriptPath=scriptPath; this.child=null; this.retryAt=0; this.state={available:false,bands:[]}; }
+  constructor(options = {}) { super(); if((options.platform||process.platform)==='linux')return new (require('./linux-audio.cjs').LinuxAudio)(options); this.scriptPath=options.scriptPath||path.join(__dirname, '../../native/audio.ps1'); this.child=null; this.retryAt=0; this.state={available:false,bands:[]}; }
   publish(state) { this.state={...state,updatedAt:Date.now()}; this.emit('state',this.state); }
   start() {
     if(this.child || Date.now()<this.retryAt)return;

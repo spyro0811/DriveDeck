@@ -28,7 +28,7 @@ export function teslaMarkup(){return `
 export class TeslaDecks{
  constructor(ids,actions){this.ids=ids;this.map=new MapCanvas(ids['mt-map']);ids['mt-zoom-in'].onclick=()=>actions.zoom(1.25);ids['mt-zoom-out'].onclick=()=>actions.zoom(.8);ids['mt-compass'].onclick=()=>actions.compass();this.identity=null;this.request=0;this.preview=null;}
  text(id,value){const e=this.ids[id];if(e.textContent!==String(value))e.textContent=value;}
- async identityChanged(id){const request=++this.request;this.preview=null;this.showImage(null);if(!id)return;try{const preview=await window.driveDeck?.vehiclePreview?.(id);if(request!==this.request)return;this.preview=preview?.id===id?preview:null;this.showImage(this.preview?.image);}catch{}}
+ async identityChanged(id){this.lastLookup=Date.now();const request=++this.request;this.preview=null;this.showImage(null);if(!id)return;try{const preview=await window.driveDeck?.vehiclePreview?.(id);if(request!==this.request)return;this.preview=preview?.id===id?preview:null;this.showImage(this.preview?.image);}catch{}}
  async showImage(src){
   const request=(this.imageRequest||0)+1;this.imageRequest=request;this.imageReady=false;
   for(const p of ['ms','mt']){this.ids[p+'-image'].hidden=true;this.ids[p+'-image'].removeAttribute('src');this.ids[p+'-fallback'].hidden=false;}
@@ -37,7 +37,7 @@ export class TeslaDecks{
  }
 
  update({deck,settings,data,map,rpm,speed,now}){
-  const id=data.connected&&!settings.demo?data.vehicleId:null,visual=vehicleVisual(data),identity=id?`${id}:${visual.key}`:null;if(identity!==this.identity){this.identity=identity;this.identityChanged(id);}
+  const id=data.connected&&!settings.demo?data.vehicleId:null,visual=vehicleVisual(data),identity=id?`${id}:${visual.key}`:null;if(identity!==this.identity||(id&&!this.preview?.image&&Date.now()-(this.lastLookup||0)>10000)){this.identity=identity;this.identityChanged(id);}
   const rear=!!id&&!!visual.asset;
   for(const prefix of ['ms','mt']){this.ids[prefix+'-rear-asset'].toggleAttribute('hidden',!rear);this.ids[prefix+'-rear-fallback'].toggleAttribute('hidden',rear);if(rear&&this.rearKey!==visual.key){this.ids[prefix+'-rear-asset'].setAttribute('viewBox',visual.viewBox.join(' '));this.ids[prefix+'-rear-image'].setAttribute('href',new URL(`./assets/vehicles/${visual.asset}.png`,import.meta.url).href);this.ids[prefix+'-rear-image'].setAttribute('width',visual.width);this.ids[prefix+'-rear-image'].setAttribute('height',visual.height);}}
   this.rearKey=visual.key;
@@ -48,7 +48,7 @@ export class TeslaDecks{
   this.text(p+'-time',new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}));
   this.ids[p+'-gears'].querySelectorAll('[data-gear]').forEach(e=>e.classList.toggle('selected',e.dataset.gear===gear));this.text(p+'-gear',['P','R','N','D'].includes(gear)?'':gear);
   for(const prefix of ['ms','mt']){this.ids[prefix+'-driving-car'].hidden=park||!data.connected;this.ids[prefix+'-car'].hidden=!park&&data.connected;}
-  this.text(p+'-preview-note',!data.connected?'Connect the BeamNG companion':!id?'Vehicle identity unavailable':'');
+  this.text(p+'-preview-note',!data.connected?'Connect the BeamNG companion':!id?'Enable Other UDP protocols in BeamNG, then reload the vehicle':'');
   const fuel=data.connected&&Number.isFinite(data.fuel)?`${Math.round(data.fuel*100)}%`:'—';
   this.text(p+'-fuel',p==='ms'?`${fuel} fuel`:`Fuel ${fuel}`);
   const mode=data.connected?(data.driveModeLabel||data.driveModeKey||''):'';this.text(p+'-mode',mode);

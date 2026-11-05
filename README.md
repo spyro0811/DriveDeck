@@ -1,6 +1,6 @@
 # DriveDeck
 
-A standalone Windows cockpit for **BeamNG.drive**, designed for the **Corsair XENEON EDGE (2560 × 720)** and other secondary displays. 
+A standalone Windows and Linux cockpit for **BeamNG.drive**, designed for the **Corsair XENEON EDGE (2560 × 720)** and other secondary displays.
 
 Open **Display** (monitor icon), select your Edge, and the cockpit opens fullscreen there. **F11** toggles fullscreen; **Escape** returns to a window. Ultra/Vivace fullscreen hides the app chrome; move the pointer to the top edge to reveal the deck selector and controls. The display selection is remembered.
 
@@ -129,3 +129,8 @@ For manual pairing, use **Connect** on the phone and enter the PC address (inclu
 ## Window resolution
 
 Settings → Display includes resolution presets and custom dimensions. Apply resolution exits fullscreen, changes the window size, and saves the size for next launch. These controls are included in the regular installer source as well as portable builds.
+
+
+## Linux and Steam Deck
+
+Linux packages are prepared for x86-64 desktops and Steam Deck. See [LINUX-QUICKSTART.md](LINUX-QUICKSTART.md) for installation and companion setup, or [LINUX.md](LINUX.md) for development details. The AppImage supports in-app updates; Debian and portable packages update manually. Linux includes the exclusive Arch BTW deck. Linux-only releases do not replace the Windows update destination. Distribution coverage remains limited.

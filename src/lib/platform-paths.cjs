@@ -1,0 +1,3 @@
+const path=require('node:path'),os=require('node:os');
+function platformPaths({platform=process.platform,home=os.homedir(),env=process.env}={}){const p=platform==='linux'?path.posix:path.win32;const data=platform==='linux'?(env.XDG_DATA_HOME&&p.isAbsolute(env.XDG_DATA_HOME)?env.XDG_DATA_HOME:p.join(home,'.local/share')):(env.LOCALAPPDATA||p.join(home,'AppData/Local'));const user=env.DRIVEDECK_BEAMNG_USER||p.join(data,'BeamNG/BeamNG.drive/current');const steam=platform==='linux'?[p.join(home,'.local/share/Steam'),p.join(home,'.steam/steam'),p.join(home,'.var/app/com.valvesoftware.Steam/data/Steam')]:[p.join(env['ProgramFiles(x86)']||'C:/Program Files (x86)','Steam')];return {user,steam,game:env.DRIVEDECK_BEAMNG_GAME||null};}
+module.exports={platformPaths};

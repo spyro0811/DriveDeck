@@ -44,6 +44,10 @@ The local no-feed Setup can be built before your repository exists; public updat
 Current builds are unsigned, matching the existing portable distribution. Windows may show an unknown-publisher/SmartScreen prompt. Before wider distribution, configure a code-signing identity in electron-builder and CI secrets; keep using that identity for later updates. Do not disable update checksum verification. The pinned electron-updater 6 / electron-builder 26 combination supports NSIS updates; review migration requirements before upgrading either major version.
 
 
-## Patch notes in updates (0.20.0 and later)
+## Linux-only release
 
-Edit src/release-notes.json with the version and user-facing notes before building. The build embeds these notes into latest.yml, and the release workflow uses them for the GitHub release body. Update notices display plain-text patch notes during download and restart readiness. After upgrading, existing users see What’s new once; Display → View patch notes can reopen it. Older installed clients still use their existing prompt to get the new installer, then see the new notes window after upgrading. The old interface itself cannot change before the update is installed.
+Bump package.json and package-lock.json together, and write src/release-notes-linux.json. Run **Build Linux release** manually on the matching source, or push a `linux-vVERSION` tag. The Windows workflow only responds to `vVERSION` tags and is not run by the Linux tag.
+
+The Linux workflow builds an AppImage, Debian package, portable tar archive, latest-linux.yml and checksums. It verifies the actual AppImage under Xvfb and creates a draft only after checks pass. Test the AppImage on Steam Deck before publishing. **Do not mark a Linux-only release as GitHub’s latest release**: existing Windows installations use that destination. Publish with the “Set as the latest release” checkbox unchecked (or `gh release edit linux-vVERSION --draft=false --latest=false`). Published releases are never overwritten.
+
+Linux AppImages select the highest stable published version with matching Linux assets, including Linux-only tags and future shared `vVERSION` releases. They ignore drafts, prereleases and Windows-only releases. No credentials are embedded in the app. Existing experimental tar users must manually download the first update-enabled AppImage.

@@ -186,6 +186,7 @@ test('Companion identifies Ardente by selected body/config, not the shared Vivac
   v={data={information={name={'Cherrier Vivace'}}},config={parts={vivace_body='ardente_body'},partConfigFilename='vehicles/vivace/custom.pc'}}
   local m=(function() ${source} end)();m.init();local o={magic={},vehicleId={},vehicleName={},modeKey={},modeLabel={},modeColor={},selectedGear={}};m.fillStruct(o,2)
   assert(o.vehicleId.value=='vivace' and o.vehicleName.value=='Cherrier Ardente')
+  vehiclePath=string.char(67,58,92)..'vehicles'..string.char(92)..'vivace'..string.char(92);m.reset();m.fillStruct(o,2);assert(o.vehicleId.value=='vivace','Proton Windows paths normalize to the correct vehicle ID')
   v.config.parts.vivace_body='vivace_body';v.config.partConfigFilename='vehicles/vivace/ardente_old_config.pc';m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Vivace','Selected body takes priority over filename')
   v.config.parts={};m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Ardente','Config fallback identifies shared-platform variants')
  `);

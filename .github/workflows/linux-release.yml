@@ -1,0 +1,78 @@
+name: Build Linux release
+on:
+  workflow_dispatch:
+  push:
+    tags: ['linux-v*']
+permissions:
+  contents: write
+concurrency:
+  group: linux-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DRIVEDECK_RELEASE_REPOSITORY: ${{ vars.RELEASE_REPOSITORY || github.repository }}
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Linux release version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "linux-v$version" ]]; then exit 1; fi
+          echo "DD_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Install Linux build and display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libatk-bridge2.0-0 libgtk-3-0t64 libgbm1 libasound2t64 libfuse2t64 xvfb
+          # Isolated hosted runner only: permit Chromium's user-namespace sandbox.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: npm ci
+      - run: npm test
+      - name: Rebuild bundled BeamNG companion
+        run: python3 scripts/package-companion.py
+      - name: Check source UI
+        run: xvfb-run -a node_modules/.bin/electron scripts/check-settings.cjs
+      - name: Build Linux packages and update feed
+        run: npm run linux:package
+      - name: Test actual AppImage under a virtual display
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: xvfb-run -a "dist/DriveDeck-$DD_VERSION-x64.AppImage" --linux-smoke-test
+      - name: Package portable fallback and validate Linux artifacts
+        run: |
+          cp LINUX-QUICKSTART.md dist/linux-unpacked/READ-ME-FIRST.md
+          tar -C dist/linux-unpacked -czf "dist/DriveDeck-$DD_VERSION-linux-x64.tar.gz" .
+          node scripts/verify-linux-release.cjs
+      - name: Save Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriveDeck-Linux-${{ env.DD_VERSION }}
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*-linux-x64.tar.gz
+            dist/latest-linux.yml
+            dist/SHA256SUMS.txt
+            LINUX-QUICKSTART.md
+            artifacts/linux/
+          if-no-files-found: error
+      - name: Create Linux-only draft release
+        run: |
+          tag="linux-v$DD_VERSION"
+          repo="$DRIVEDECK_RELEASE_REPOSITORY"
+          notes="$RUNNER_TEMP/linux-release-notes.md"
+          node -e "process.stdout.write(require('./src/release-notes-linux.json').notes)" > "$notes"
+          printf '\n\nPublishing: leave “Set as the latest release” unchecked. This Linux-only release must not replace the Windows update destination.\n' >> "$notes"
+          if gh release view "$tag" --repo "$repo" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            node -e "if(!require(process.env.RUNNER_TEMP+'/release.json').isDraft)process.exit(1)"
+          else
+            gh release create "$tag" --repo "$repo" --target "$GITHUB_SHA" --draft --latest=false --title "DriveDeck $DD_VERSION — Linux & Steam Deck" --notes-file "$notes"
+          fi
+          gh release edit "$tag" --repo "$repo" --latest=false --notes-file "$notes"
+          gh release upload "$tag" --repo "$repo" --clobber "dist/DriveDeck-$DD_VERSION-x64.AppImage" "dist/DriveDeck-$DD_VERSION-amd64.deb" "dist/DriveDeck-$DD_VERSION-linux-x64.tar.gz" dist/latest-linux.yml dist/SHA256SUMS.txt LINUX-QUICKSTART.md
