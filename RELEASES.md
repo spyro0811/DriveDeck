@@ -10,6 +10,10 @@
 
 Never put a token in package.json, release.config.json, renderer code, Git, or a distributed app. Public clients read public releases without credentials.
 
+## Download guidance in every release
+
+Both release workflows automatically prepend [RELEASE-DOWNLOADS.md](RELEASE-DOWNLOADS.md) to the GitHub release notes. Keep this guidance at the top when creating or editing a release manually.
+
 ## Publish a new version
 
 1. Run `npm version 0.17.1 --no-git-tag-version` (use your next version), then commit the code and lockfile.

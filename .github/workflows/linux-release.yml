@@ -93,7 +93,7 @@ jobs:
           tag="linux-v$DD_VERSION"
           repo="$DRIVEDECK_RELEASE_REPOSITORY"
           notes="$RUNNER_TEMP/linux-release-notes.md"
-          node -e "process.stdout.write(require('./src/release-notes-linux.json').notes)" > "$notes"
+          node -e "process.stdout.write(require('node:fs').readFileSync('./RELEASE-DOWNLOADS.md','utf8')+'\n\n'+require('./src/release-notes-linux.json').notes)" > "$notes"
           printf '\n\nPublishing: leave “Set as the latest release” unchecked. This Linux-only release must not replace the Windows update destination.\n' >> "$notes"
           if gh release view "$tag" --repo "$repo" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             node -e "if(!require(process.env.RUNNER_TEMP+'/release.json').isDraft)process.exit(1)"

@@ -84,7 +84,7 @@ jobs:
           tag="v$DD_VERSION"
           repo="$DRIVEDECK_RELEASE_REPOSITORY"
           notes="$RUNNER_TEMP/shared-release-notes.md"
-          node -e "process.stdout.write(require('./src/release-notes.json').notes+'\n\n'+require('./src/release-notes-linux.json').notes)" > "$notes"
+          node -e "process.stdout.write(require('node:fs').readFileSync('./RELEASE-DOWNLOADS.md','utf8')+'\n\n'+require('./src/release-notes.json').notes+'\n\n'+require('./src/release-notes-linux.json').notes)" > "$notes"
           if gh release view "$tag" --repo "$repo" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             node -e "if(!require(process.env.RUNNER_TEMP+'/release.json').isDraft)process.exit(1)"
           else
