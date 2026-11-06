@@ -1,0 +1,80 @@
+import {clamp,gearLabel} from './model.mjs';
+import {MapCanvas} from './map.mjs';
+import {AudioCanvas} from './audio.mjs';
+const point=(r,a)=>[180+r*Math.cos(a*Math.PI/180),180+r*Math.sin(a*Math.PI/180)];
+// Start the restrained tail at the scale's far end, then fade through zero
+// into a flat white instrument surface. Only the live portion is revealed.
+export function martinSweepOpacity(angle,ratio){
+ if(!Number.isFinite(ratio)||ratio<=0||angle>140+clamp(ratio,0,1)*260)return 0;
+ const smooth=x=>{const t=clamp(x,0,1);return t*t*(3-2*t);};
+ return angle<140?.14*smooth((angle-40)/100):.14+.86*smooth((angle-140)/50);
+}
+function drawMartinSweep(canvas,ratio){
+ const size=Math.max(1,Math.round(canvas.getBoundingClientRect().width*Math.min(globalThis.devicePixelRatio||1,2)));
+ if(canvas.width===size&&canvas._ratio===ratio)return;
+ canvas.width=canvas.height=size;canvas._ratio=ratio;const ctx=canvas.getContext('2d');ctx.setTransform(size/360,0,0,size/360,0,0);ctx.clearRect(0,0,360,360);
+ if(ratio<=0)return;
+ const gradient=ctx.createConicGradient(40*Math.PI/180,180,180);
+ for(let angle=40;angle<=190;angle+=10)gradient.addColorStop((angle-40)/360,`rgba(244,245,243,${martinSweepOpacity(angle,1)})`);
+ gradient.addColorStop(1,'#f4f5f3');ctx.strokeStyle=gradient;ctx.lineWidth=52;ctx.lineCap='butt';ctx.beginPath();ctx.arc(180,180,125,40*Math.PI/180,(140+ratio*260)*Math.PI/180);ctx.stroke();
+}
+function dial(kind){
+ let marks='';
+ for(let i=0;i<=80;i++){
+  const ratio=i/80,major=i%10===0,medium=i%5===0,a=140+ratio*260;
+  const p=point(major?144:medium?147:150,a),q=point(157,a);
+  marks+=`<path d="M${p}L${q}" class="martin-tick ${major?'major':''}" data-martin-${kind}-mark="${ratio}"/>`;
+  if(major){const l=point(130,a);marks+=`<text x="${l[0]}" y="${l[1]}" class="martin-number" data-martin-${kind}-tick="${ratio}">${kind==='rpm'?i/10:i/10*20}</text>`;}
+ }
+ return `<div class="martin-dial"><svg viewBox="0 0 360 360" role="img" aria-label="${kind==='speed'?'Speedometer':'Tachometer'}">
+ <defs><radialGradient id="martin-${kind}-dial-shade" cx=".46" cy=".35" r=".7"><stop stop-color="#17241e"/><stop offset=".72" stop-color="#101b16"/><stop offset="1" stop-color="#060b09"/></radialGradient>
+ <linearGradient id="martin-${kind}-rim" x1="0" y1="0" x2=".3" y2="1"><stop stop-color="#59625c"/><stop offset=".35" stop-color="#202923"/><stop offset=".8" stop-color="#47534a"/><stop offset="1" stop-color="#222b25"/></linearGradient>
+
+ <radialGradient id="martin-${kind}-center-shade"><stop stop-color="#060908"/><stop offset=".8" stop-color="#030605"/><stop offset="1" stop-color="#0c1510"/></radialGradient></defs>
+ <circle cx="180" cy="180" r="164" class="martin-outer" stroke="url(#martin-${kind}-rim)"/>
+ <circle cx="180" cy="180" r="161.5" class="martin-rim-inner"/>
+ <circle cx="180" cy="180" r="159" fill="url(#martin-${kind}-dial-shade)"/>
+ <foreignObject x="0" y="0" width="360" height="360" pointer-events="none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="martin-sweep" id="martin-${kind}-sweep" aria-hidden="true"></canvas></foreignObject>
+ <circle cx="180" cy="180" r="151" class="martin-arc-edge" id="martin-${kind}-edge" pathLength="100"/>
+ ${marks}
+ <circle cx="180" cy="180" r="101.5" class="martin-inner-bevel"/>
+ <circle cx="180" cy="180" r="98" fill="url(#martin-${kind}-center-shade)"/>
+ <circle cx="180" cy="180" r="94" class="martin-accent-track"/><circle cx="180" cy="180" r="94" class="martin-accent" id="martin-${kind}-accent" pathLength="100"/>
+ <circle cx="180" cy="180" r="91.8" class="martin-accent-inner"/>
+ <g id="martin-${kind}-needle" transform="rotate(140 180 180)"><path d="M280 178.7 331 180 280 181.3Z" fill="#eef1e9"/></g>
+ <text x="180" y="197" class="martin-value" id="martin-${kind}-value">—</text>
+ <text x="180" y="222" class="martin-unit" id="martin-${kind}-unit">${kind==='speed'?'MPH':'GEAR'}</text>
+ <rect x="122" y="289" width="116" height="41" rx="8" fill="#060b08" fill-opacity=".96"/><text x="180" y="302" class="martin-support-label">${kind==='speed'?'FUEL':'ENGINE TEMP'}</text><text x="180" y="320" class="martin-detail" id="martin-${kind}-detail">—</text></svg></div>`;
+}
+export function martinVehicle(){return `<svg class="martin-overhead-car" viewBox="0 0 120 240" aria-label="Silver vehicle viewed from above"><defs>
+ <linearGradient id="martin-car-silver" x2="1"><stop stop-color="#2c3234"/><stop offset=".13" stop-color="#9ea5a7"/><stop offset=".3" stop-color="#d9dcdb"/><stop offset=".49" stop-color="#f0f1ed"/><stop offset=".66" stop-color="#b4bab9"/><stop offset=".86" stop-color="#777e80"/><stop offset="1" stop-color="#252d30"/></linearGradient>
+ <linearGradient id="martin-car-hood" x2=".15" y2="1"><stop stop-color="#cdd1d1"/><stop offset=".48" stop-color="#9ba2a5"/><stop offset="1" stop-color="#454e53"/></linearGradient>
+ <linearGradient id="martin-car-glass" x2=".6" y2="1"><stop stop-color="#050a0d"/><stop offset=".4" stop-color="#253239"/><stop offset=".5" stop-color="#35434a"/><stop offset=".55" stop-color="#142027"/><stop offset="1" stop-color="#03090c"/></linearGradient>
+ <linearGradient id="martin-car-roof" x2="1" y2=".2"><stop stop-color="#606a70"/><stop offset=".25" stop-color="#c0c7c7"/><stop offset=".52" stop-color="#e6e8e4"/><stop offset=".82" stop-color="#949fa0"/><stop offset="1" stop-color="#424e55"/></linearGradient></defs>
+ <ellipse cx="60" cy="124" rx="47" ry="111" fill="#000" opacity=".7"/>
+ <g fill="#090c0d" stroke="#303537" stroke-width=".6"><rect x="9" y="56" width="14" height="40" rx="5"/><rect x="97" y="56" width="14" height="40" rx="5"/><rect x="9" y="167" width="14" height="39" rx="5"/><rect x="97" y="167" width="14" height="39" rx="5"/></g>
+ <path d="M37 10Q60 3 83 10L94 33Q98 46 99 67L104 86 102 189Q100 219 88 228 60 239 32 228 20 219 18 189L16 86 21 67Q22 46 26 33Z" fill="url(#martin-car-silver)" stroke="#636c70" stroke-width="1"/>
+ <path d="M34 15Q60 9 86 15L92 51 87 66Q60 57 33 66L28 51Z" fill="url(#martin-car-hood)"/>
+ <path d="M32 24 38 59M88 24 82 59" fill="none" stroke="#e4e7e3" stroke-width=".8" opacity=".65"/>
+ <path d="M28 65Q60 54 92 65L85 98Q60 89 35 98Z" fill="url(#martin-car-glass)" stroke="#5f6e73" stroke-width=".9"/>
+ <path d="M36 101Q60 92 84 101L84 153Q60 165 36 153Z" fill="url(#martin-car-roof)" stroke="#9fa9a9" stroke-width=".6"/>
+ <path d="M28 81 33 106V150L25 166Z M92 81 87 106V150L95 166Z" fill="#111b20" stroke="#899598" stroke-width=".6"/>
+ <path d="M35 161Q60 174 85 161L91 194Q60 206 29 194Z" fill="url(#martin-car-glass)" stroke="#69777c" stroke-width=".7"/>
+ <path d="M31 201Q60 214 89 201L88 220Q60 231 32 220Z" fill="url(#martin-car-silver)" stroke="#8f9999" stroke-width=".6"/>
+ <path d="M24 101 21 164M96 101 99 164M21 167 27 199M99 167 93 199" stroke="#414b50" fill="none" stroke-width=".8"/>
+ <path d="M27 37 37 30M93 37 83 30" stroke="#eef0e8" stroke-width="3" stroke-linecap="round"/>
+ <path d="M30 221 40 223M90 221 80 223" stroke="#8d5e59" stroke-width="2"/>
+ <path d="M23 81 13 86V91L24 89M97 81 107 86V91L96 89" fill="#aeb7b9" stroke="#445056" stroke-width=".6"/>
+ <path d="M39 105V150M81 105V150" stroke="#f4f4ee" stroke-width=".6" opacity=".45"/>
+ </svg>`;}
+export function martinMarkup(){return `<section id="martin-deck" class="martin-deck" hidden><header><b>MARTIN</b><span id="martin-outside">—</span><label>CENTER DISPLAY<select id="martin-center" aria-label="Martin center display"><option value="artwork">Cover art + visualizer</option><option value="map">Map</option><option value="map3d">Map · 3D</option><option value="tires">Tire pressure</option></select></label></header><div class="martin-cluster">${dial('speed')}<div class="martin-middle"><section id="martin-art"><div class="martin-cover"><img id="martin-cover-image" alt="Album artwork" hidden><span id="martin-cover-empty">♪</span></div><strong id="martin-title">Your soundtrack.</strong><span id="martin-artist">Play something in your favorite app.</span><canvas id="martin-levels" aria-label="Album-colored audio visualizer"></canvas><div class="martin-center-transport"><button id="martin-previous" aria-label="Previous track">‹</button><button id="martin-play" aria-label="Play or pause">▶</button><button id="martin-next" aria-label="Next track">›</button></div></section><section class="martin-map-panel" id="martin-map-panel" hidden><canvas id="martin-map" aria-label="Live BeamNG map"></canvas><span id="martin-map-status">Waiting for BeamNG map</span><div class="martin-map-buttons"><button id="martin-zoom-in" aria-label="Zoom in">+</button><button id="martin-zoom-out" aria-label="Zoom out">−</button></div></section><section class="martin-tires" id="martin-tires" hidden><h2>TIRE PRESSURE</h2><div class="martin-tire-layout"><div><b id="martin-FL">—</b><small>FL · PSI</small><b id="martin-RL">—</b><small>RL · PSI</small></div>${martinVehicle()}<div><b id="martin-FR">—</b><small>FR · PSI</small><b id="martin-RR">—</b><small>RR · PSI</small></div></div><p id="martin-tire-status">Waiting for tire data</p></section></div>${dial('rpm')}</div><footer><span id="martin-status">WAITING FOR BEAMNG</span><div id="martin-media-slot"></div><span id="martin-trip">—</span></footer></section>`;}
+export function martinPressures(data,demo=false){const values=demo?{FL:230,FR:230,RL:245,RR:245}:data.connected?data.tirePressures:null;return Object.fromEntries(['FL','FR','RL','RR'].map(key=>[key,Number.isFinite(values?.[key])&&values[key]>=0&&values[key]<=3000?(values[key]*.145037738).toFixed(1):'—']));}
+export class MartinView{
+ constructor(ids,actions){this.ids=ids;this.actions=actions;for(const [id,command]of [['previous','previous'],['play','toggle'],['next','next']])ids['martin-'+id].onclick=()=>actions.playback?.(command);this.map=new MapCanvas(ids['martin-map']);this.levels=new AudioCanvas(ids['martin-levels'],6);ids['martin-center'].onchange=e=>actions.martinCenter?.(e.target.value);ids['martin-zoom-in'].onclick=()=>actions.zoom(1.25);ids['martin-zoom-out'].onclick=()=>actions.zoom(.8);}
+ update({data,settings,rpm,speed,maxRpm,map,media,audio,now,trip},palette){const live=!!data.connected,km=settings.units==='kmh',view=settings.martinCenter||'artwork',put=(id,v)=>{if(this.ids[id].textContent!==String(v))this.ids[id].textContent=v;};this.ids['martin-center'].value=view;this.ids['martin-deck'].dataset.center=view;for(const [name,ratio]of [['speed',live?clamp(speed/(km?260:160),0,1):0],['rpm',live?clamp(rpm/maxRpm,0,1):0]]){drawMartinSweep(this.ids[`martin-${name}-sweep`],ratio);for(const part of ['accent','edge'])this.ids[`martin-${name}-${part}`].style.strokeDasharray=`${ratio*72.22} 100`;this.ids['martin-deck'].querySelectorAll(`[data-martin-${name}-tick],[data-martin-${name}-mark]`).forEach(e=>{const value=Number(e.getAttribute(`data-martin-${name}-tick`)??e.getAttribute(`data-martin-${name}-mark`));e.classList.toggle('passed',ratio>0&&value<=ratio);e.classList.toggle('red',name==='rpm'&&value>=Math.min(1,(settings.redline||maxRpm*.85)/maxRpm));});this.ids[`martin-${name}-needle`].setAttribute('transform',`rotate(${140+ratio*260} 180 180)`);}this.ids['martin-deck'].querySelectorAll('[data-martin-speed-tick]').forEach(e=>e.textContent=Math.round(Number(e.dataset.martinSpeedTick)*(km?260:160)));this.ids['martin-deck'].querySelectorAll('[data-martin-rpm-tick]').forEach(e=>e.textContent=Number((Number(e.dataset.martinRpmTick)*maxRpm/1000).toFixed(1)));put('martin-speed-value',live?Math.round(speed):'—');put('martin-speed-unit',km?'KM/H':'MPH');put('martin-rpm-value',live?(data.selectedGear==='D'&&data.gear>0?data.gear:data.selectedGear||gearLabel(data.gear)):'—');put('martin-rpm-unit',live?(data.driveModeLabel||'GEAR'):'GEAR');put('martin-speed-detail',live&&Number.isFinite(data.fuel)?Math.round(data.fuel*100)+'%':'—');const temp=n=>live&&Number.isFinite(n)?Math.round(km?n:n*9/5+32)+'°'+(km?'C':'F'):'—';put('martin-rpm-detail',temp(data.engineTemp));put('martin-outside',temp(data.ambientTemp));put('martin-status',settings.demo?'DEMO · SIMULATED DATA':live?'LIVE VEHICLE DATA':'WAITING FOR BEAMNG');put('martin-trip',((trip?.meters||0)/(km?1000:1609.344)).toFixed(1)+(km?' KM':' MI'));
+  this.ids['martin-art'].hidden=view!=='artwork';this.ids['martin-map-panel'].hidden=!['map','map3d'].includes(view);this.ids['martin-tires'].hidden=view!=='tires';
+  if(view==='artwork'){this.ids['martin-play'].textContent=media.playing?'Ⅱ':'▶';this.ids['martin-play'].disabled=!media.available||!media.canToggle||!this.actions.playback;this.ids['martin-previous'].disabled=!media.available||!media.canPrevious||!this.actions.playback;this.ids['martin-next'].disabled=!media.available||!media.canNext||!this.actions.playback;put('martin-title',media.available?media.title||'Untitled track':'Your soundtrack.');put('martin-artist',media.available?media.artist||'':'Play something in your favorite app.');const source=typeof media.artwork==='string'&&/^data:image\/(png|jpeg|webp|bmp|gif);base64,[A-Za-z0-9+/=]+$/.test(media.artwork)&&media.artwork.length<1500000?media.artwork:null;if(source!==this.cover){this.cover=source;this.ids['martin-cover-image'].hidden=!source;this.ids['martin-cover-empty'].hidden=!!source;if(source)this.ids['martin-cover-image'].src=source;else this.ids['martin-cover-image'].removeAttribute('src');}this.levels.palette=palette;this.levels.draw(audio,now,settings.demo,media.playing);}
+  else if(view==='tires'){const pressures=martinPressures(data,settings.demo);for(const key of ['FL','FR','RL','RR'])put('martin-'+key,pressures[key]);put('martin-tire-status',settings.demo?'DEMO PRESSURES':Object.values(pressures).some(v=>v!=='—')?'LIVE · PSI':'Install the updated companion · tire data unavailable');}
+  else{this.map.draw(map,{...settings,atlasView:view==='map3d'?'3d':'2d',mapAppearance:'dark'},now);put('martin-map-status',map?.connected&&map.roads?.length?(map.levelName||'LIVE NAVIGATION'):'Waiting for BeamNG map');}
+ }
+}

@@ -42,7 +42,21 @@ export class AudioCanvas {
       const sample=inputs[i];
       const target=Number.isFinite(sample)?Math.max(0,Math.min(1,sample)):0;
       if(count!==6)this.values[i]+=(target-this.values[i])*(1-Math.exp(-dt/(target>this.values[i]?45:150)));
-      const bh=Math.max(count===6?bar:Math.min(bar,4*ratio),this.values[i]*h*(count===6?.96:.88));ctx.beginPath();ctx.roundRect(left+i*(bar+gap),(h-bh)/2,bar,bh,count===6?bar/2:Math.min(bar/2,4*ratio));ctx.fill();
+      const bh=Math.max(count===6?bar:Math.min(bar,4*ratio),motionLevel(this.values[i],this.motionAmount)*h*(count===6?.96:.88));ctx.beginPath();ctx.roundRect(left+i*(bar+gap),(h-bh)/2,bar,bh,count===6?bar/2:Math.min(bar/2,4*ratio));ctx.fill();
     }
   }
+}
+
+// Apply gain after adaptive leveling so normalization cannot cancel the setting.
+export function motionLevel(value,percent=100){return Math.max(0,Math.min(1,value*Math.max(0,Math.min(200,Number.isFinite(percent)?percent:100))/100));}
+export class BassPulse {
+ constructor(){this.body=0;this.previous=0;this.lastHit=-Infinity;this.last=0;}
+ step(audio,now,enabled){
+  const dt=Math.max(0,Math.min(100,now-this.last));this.last=now;
+  if(!enabled||!audio?.available||Date.now()-audio.updatedAt>600){this.body=0;this.previous=0;this.lastHit=-Infinity;return 0;}
+  const bass=Math.max(0,...(audio.bands||[]).slice(0,8).map(v=>Number.isFinite(v)?v:0));
+  if(bass>.28&&bass>this.body+.1&&bass>this.previous+.07&&now-this.lastHit>=350)this.lastHit=now;
+  this.body+=(bass-this.body)*(1-Math.exp(-dt/550));this.previous=bass;
+  return Math.max(0,1-(now-this.lastHit)/160)*.22;
+ }
 }

@@ -5,12 +5,13 @@ function validateBands(value) {
   return Array.isArray(value) && value.length === 32 && value.every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1) ? value : null;
 }
 class Audio extends EventEmitter {
-  constructor(options = {}) { super(); if((options.platform||process.platform)==='linux')return new (require('./linux-audio.cjs').LinuxAudio)(options); this.scriptPath=options.scriptPath||path.join(__dirname, '../../native/audio.ps1'); this.child=null; this.retryAt=0; this.state={available:false,bands:[]}; }
+  constructor(options = {}) { super(); if((options.platform||process.platform)==='linux')return new (require('./linux-audio.cjs').LinuxAudio)(options); this.scriptPath=options.scriptPath||path.join(__dirname, '../../native/audio.ps1'); this.excludeBeamng=true; this.child=null; this.retryAt=0; this.state={available:false,bands:[]}; }
   publish(state) { this.state={...state,updatedAt:Date.now()}; this.emit('state',this.state); }
+  configure({excludeBeamngAudio=true}={}) { if(this.excludeBeamng!==excludeBeamngAudio){this.stop();this.excludeBeamng=excludeBeamngAudio;} }
   start() {
     if(this.child || Date.now()<this.retryAt)return;
     this.publish({available:false,bands:[],starting:true});
-    const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',this.scriptPath],{windowsHide:true,stdio:['ignore','pipe','pipe']});this.child=child;
+    const child=spawn('powershell.exe',['-Mta','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',this.scriptPath,...(this.excludeBeamng?['-ExcludeBeamng']:[])],{windowsHide:true,stdio:['ignore','pipe','pipe']});this.child=child;
     let buffer='',detail='';
     child.stdout.setEncoding('utf8');child.stdout.on('data',chunk=>{buffer+=chunk;if(buffer.length>65536){buffer='';return;}let end;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end);buffer=buffer.slice(end+1);if(this.child!==child)return;try{const message=JSON.parse(line);const bands=validateBands(message.bands);if(bands)this.publish({available:true,bands});else if(message.error)detail=String(message.error).slice(0,250);}catch{}}});
     child.stderr.on('data',chunk=>{detail=chunk.toString().slice(0,250);});

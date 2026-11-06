@@ -5,6 +5,7 @@ local ffi = require('ffi')
 local vehicleId, vehicleName, engine = '', '', nil
 local driveModeController = nil
 local probeTimer = 10
+local tireTimer = 0
 
 local function copyText(target, value, capacity)
   ffi.fill(target, capacity, 0)
@@ -86,6 +87,26 @@ local function fillStruct(o, dtSim)
   light(e.tcsActive, 16); light(e.signal_L, 32); light(e.signal_R, 64)
   light(e.oil, 256); light(e.battery, 512); light(e.absActive, 1024)
   o.lights = lights
+  tireTimer = tireTimer + (dtSim or 0)
+  if tireTimer >= 0.5 and wheels and wheels.wheels and obj.getGroupPressure and obj.getEnvPressure and jsonEncode then
+    tireTimer = 0
+    local pressures = {}
+    for _, wheel in pairs(wheels.wheels) do
+      local name = type(wheel.name)=='string' and wheel.name:upper() or ''
+      local group = wheel.pressureGroup and v and v.data and v.data.pressureGroups and v.data.pressureGroups[wheel.pressureGroup]
+      if group and (name=='FL' or name=='FR' or name=='RL' or name=='RR') then
+        local ok, absolute = pcall(obj.getGroupPressure, obj, group)
+        local envOk, atmospheric = pcall(obj.getEnvPressure, obj)
+        if ok and envOk and type(absolute)=='number' and type(atmospheric)=='number' then
+          local kpa = math.max(0,(absolute-atmospheric)*0.001)
+          if kpa==kpa and kpa<=3000 then pressures[name]=kpa end
+        end
+      end
+    end
+    if obj.getID then
+      obj:queueGameEngineLua(string.format('if extensions.drivedeck_map then extensions.drivedeck_map.sendTires(%d,%q,%q) end',obj:getID(),vehicleId,jsonEncode(pressures)))
+    end
+  end
 end
 
 M.init = init

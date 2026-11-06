@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Globalization;
+using System.Diagnostics;
 namespace DriveDeckAudio {
  [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class Enumerator {}
  [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface IDevices {
@@ -30,6 +31,20 @@ namespace DriveDeckAudio {
   [PreserveSig] int ReleaseBuffer(uint frames);
   [PreserveSig] int GetNextPacketSize(out uint frames);
  }
+ [ComVisible(true), Guid("41D949AB-9862-444A-80F6-C261334DA5EB"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface ICompletion {
+  [PreserveSig] int ActivateCompleted(IActivation operation);
+ }
+ [ComImport, Guid("72A22D78-CDE4-431D-B8CC-843A71199B6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IActivation {
+  [PreserveSig] int GetActivateResult(out int result,[MarshalAs(UnmanagedType.IUnknown)] out object activated);
+ }
+ [ComVisible(true), Guid("94EA2B94-E9CC-49E0-C0FF-EE64CA8F5B90"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] public interface IAgile {}
+ [ComVisible(true), ClassInterface(ClassInterfaceType.None)] public class Completion : ICompletion, IAgile {
+  public readonly ManualResetEvent Ready=new ManualResetEvent(false); public object Client; public int Error;
+  public int ActivateCompleted(IActivation operation){try{int hr;object client;int call=operation.GetActivateResult(out hr,out client);Error=call<0?call:hr;Client=client;}catch(Exception e){Error=Marshal.GetHRForException(e);}finally{Ready.Set();}return 0;}
+ }
+ [StructLayout(LayoutKind.Explicit,Size=24)] struct BlobVariant {
+  [FieldOffset(0)] public ushort Type; [FieldOffset(8)] public uint Size; [FieldOffset(16)] public IntPtr Data;
+ }
  public static class Capture {
   const int N=2048;
   static void Check(int hr) { Marshal.ThrowExceptionForHR(hr); }
@@ -44,21 +59,39 @@ namespace DriveDeckAudio {
     bands[b]=Math.Max(0,Math.Min(1,(20*Math.Log10(Math.Max(1e-12,magnitude))+72)/66));
    }return bands;
   }
-  public static void Run() {
-   IDevices devices=(IDevices)new Enumerator();IDevice device;Check(devices.GetDefaultAudioEndpoint(0,1,out device));
-   Guid clientId=typeof(IClient).GUID;object obj;Check(device.Activate(ref clientId,23,IntPtr.Zero,out obj));IClient client=(IClient)obj;
-   IntPtr format;Check(client.GetMixFormat(out format));int tag=Marshal.ReadInt16(format,0)&65535,channels=Marshal.ReadInt16(format,2),rate=Marshal.ReadInt32(format,4),align=Marshal.ReadInt16(format,12),bits=Marshal.ReadInt16(format,14);
+  [DllImport("Mmdevapi.dll",CharSet=CharSet.Unicode,ExactSpelling=true)] static extern int ActivateAudioInterfaceAsync(string path,ref Guid iid,ref BlobVariant parameters,ICompletion callback,out IActivation operation);
+  static int GamePid(){int best=0;long size=0;foreach(Process p in Process.GetProcesses()){using(p){try{if((String.Equals(p.ProcessName,"BeamNG.drive.x64",StringComparison.OrdinalIgnoreCase)||String.Equals(p.ProcessName,"BeamNG.drive",StringComparison.OrdinalIgnoreCase)||String.Equals(p.ProcessName,"BeamNG.drive.x86",StringComparison.OrdinalIgnoreCase))&&p.WorkingSet64>size){size=p.WorkingSet64;best=p.Id;}}catch{}}}return best;}
+  static IClient Excluding(int pid){
+   if(IntPtr.Size!=8)throw new Exception("Game audio exclusion needs 64-bit Windows.");
+   IntPtr data=Marshal.AllocCoTaskMem(12);var callback=new Completion();IActivation operation=null;
+   try{Marshal.WriteInt32(data,0,1);Marshal.WriteInt32(data,4,pid);Marshal.WriteInt32(data,8,1);
+    var parameters=new BlobVariant{Type=65,Size=12,Data=data};Guid iid=typeof(IClient).GUID;
+    Check(ActivateAudioInterfaceAsync("VAD\\Process_Loopback",ref iid,ref parameters,callback,out operation));
+    if(!callback.Ready.WaitOne(10000))throw new Exception("Audio exclusion timed out.");Check(callback.Error);return (IClient)callback.Client;
+   }catch(Exception e){throw new Exception("Cannot exclude BeamNG audio on this Windows version. Disable Exclude BeamNG audio to use system audio. "+e.Message);}
+   finally{Marshal.FreeCoTaskMem(data);if(operation!=null)Marshal.ReleaseComObject(operation);GC.KeepAlive(callback);}
+  }
+  public static void Run(){Run(false);}
+  public static void Run(bool exclude){while(true){int pid=exclude?GamePid():0;Session(pid,exclude);}}
+  static void Session(int pid,bool watch) {
+   IClient client;object obj;IDevices devices=null;IDevice device=null;IPackets packets=null;
+   if(pid!=0)client=Excluding(pid);
+   else{devices=(IDevices)new Enumerator();Check(devices.GetDefaultAudioEndpoint(0,1,out device));Guid clientId=typeof(IClient).GUID;Check(device.Activate(ref clientId,23,IntPtr.Zero,out obj));client=(IClient)obj;}
+   try{
+   IntPtr format;
+   if(pid==0)Check(client.GetMixFormat(out format));else{format=Marshal.AllocCoTaskMem(18);Marshal.Copy(new byte[18],0,format,18);Marshal.WriteInt16(format,0,1);Marshal.WriteInt16(format,2,2);Marshal.WriteInt32(format,4,44100);Marshal.WriteInt32(format,8,176400);Marshal.WriteInt16(format,12,4);Marshal.WriteInt16(format,14,16);}int tag=Marshal.ReadInt16(format,0)&65535,channels=Marshal.ReadInt16(format,2),rate=Marshal.ReadInt32(format,4),align=Marshal.ReadInt16(format,12),bits=Marshal.ReadInt16(format,14);
    if(tag==65534)tag=Marshal.ReadInt32(format,24);
    if(!((tag==3&&bits==32)||(tag==1&&(bits==16||bits==24||bits==32))))throw new Exception("Unsupported output audio format.");
    Guid session=Guid.Empty;Check(client.Initialize(0,0x20000,1000000,0,format,ref session));Marshal.FreeCoTaskMem(format);
-   Guid packetId=typeof(IPackets).GUID;Check(client.GetService(ref packetId,out obj));IPackets packets=(IPackets)obj;
-   Check(client.Start());double[] ring=new double[N],ordered=new double[N];int cursor=0;DateTime last=DateTime.UtcNow,next=DateTime.MinValue;
-   while(true){uint count;Check(packets.GetNextPacketSize(out count));while(count>0){IntPtr data;uint frames,flags;ulong pos,time;Check(packets.GetBuffer(out data,out frames,out flags,out pos,out time));
+   Guid packetId=typeof(IPackets).GUID;Check(client.GetService(ref packetId,out obj));packets=(IPackets)obj;
+   Check(client.Start());double[] ring=new double[N],ordered=new double[N];int cursor=0;DateTime last=DateTime.UtcNow,next=DateTime.MinValue,check=DateTime.UtcNow.AddSeconds(1);
+   while(true){if(watch&&DateTime.UtcNow>=check){check=DateTime.UtcNow.AddSeconds(1);if(GamePid()!=pid)return;}uint count;Check(packets.GetNextPacketSize(out count));while(count>0){IntPtr data;uint frames,flags;ulong pos,time;Check(packets.GetBuffer(out data,out frames,out flags,out pos,out time));
     try{int length=checked((int)frames*align);if(length>16*1024*1024)throw new Exception("Audio packet too large.");byte[] bytes=new byte[length];if((flags&2)==0)Marshal.Copy(data,bytes,0,length);
      for(int f=0;f<frames;f++){double sample=0;for(int c=0;c<channels;c++){int offset=f*align+c*(bits/8);double v=0;if(tag==3)v=BitConverter.ToSingle(bytes,offset);else if(bits==16)v=BitConverter.ToInt16(bytes,offset)/32768.0;else if(bits==32)v=BitConverter.ToInt32(bytes,offset)/2147483648.0;else{int n=bytes[offset]|bytes[offset+1]<<8|bytes[offset+2]<<16;if((n&0x800000)!=0)n|=unchecked((int)0xff000000);v=n/8388608.0;}if(!Double.IsNaN(v)&&!Double.IsInfinity(v))sample+=v/channels;}ring[cursor]=sample;cursor=(cursor+1)%N;}last=DateTime.UtcNow;
     }finally{Check(packets.ReleaseBuffer(frames));}Check(packets.GetNextPacketSize(out count));}
     DateTime now=DateTime.UtcNow;if(now>=next){if((now-last).TotalMilliseconds>200)Array.Clear(ring,0,N);for(int i=0;i<N;i++)ordered[i]=ring[(cursor+i)%N];double[] bands=Spectrum(ordered,rate);string[] values=new string[32];for(int i=0;i<32;i++)values[i]=bands[i].ToString("F4",CultureInfo.InvariantCulture);Console.WriteLine("{\"bands\":["+String.Join(",",values)+"]}");next=now.AddMilliseconds(40);}Thread.Sleep(8);
    }
+   }finally{client.Stop();if(packets!=null)Marshal.ReleaseComObject(packets);Marshal.ReleaseComObject(client);if(device!=null)Marshal.ReleaseComObject(device);if(devices!=null)Marshal.ReleaseComObject(devices);}
   }
  }
 }

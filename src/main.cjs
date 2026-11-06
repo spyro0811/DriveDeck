@@ -24,12 +24,12 @@ const pageUrl = pathToFileURL(page).href;
 const telemetry = new Telemetry();
 const media = new Media({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/media.ps1') : path.join(__dirname, '../native/media.ps1') });
 const audio = new Audio({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/audio.ps1') : path.join(__dirname, '../native/audio.ps1') });
-function syncAudio() { const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
+function syncAudio() { audio.configure(settings,media.state); const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
 let animated, updates, updateTimer;
 let window, settings, settingsFile, ticker;
 let saveQueue = Promise.resolve();
 let quitting = false;
-const mobile = new MobileServer({root:__dirname,snapshot:()=>({settings:{units:settings.units,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
+const mobile = new MobileServer({root:__dirname,snapshot:()=>({settings:{units:settings.units,visualizerMotion:settings.visualizerMotion,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
 
 function displays() {
   return screen.getAllDisplays().map((d, index) => ({

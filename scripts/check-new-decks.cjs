@@ -1,0 +1,19 @@
+const {app,BrowserWindow}=require('electron'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+app.disableHardwareAcceleration();app.setPath('userData',path.resolve('.runtime/new-decks'));
+app.whenReady().then(async()=>{const win=new BrowserWindow({show:false,width:1560,height:650,useContentSize:true,webPreferences:{backgroundThrottling:false}}),errors=[];win.webContents.on('console-message',e=>{if(e.level==='error')errors.push(e.message);});const js=s=>win.webContents.executeJavaScript(s),delay=ms=>new Promise(r=>setTimeout(r,ms)),until=async code=>{for(let i=0;i<100;i++){if(await js(code))return;await delay(60);}throw Error('Timed out: '+code);};await win.loadFile(path.resolve('src/renderer/index.html'));await until("document.getElementById('app').dataset.ready==='true'");
+ await js("localStorage.removeItem('drivedeck-preview')");win.reload();await delay(300);await until("document.getElementById('app').dataset.ready==='true'");
+ await js("window.__unlockPlays=0;HTMLMediaElement.prototype.play=function(){if(this instanceof HTMLAudioElement){window.__unlockPlays++;window.__unlockSource=this.src;}return Promise.resolve();};AudioContext.prototype.resume=()=>Promise.resolve();void 0;");
+ const encoded=fs.readFileSync('src/renderer/assets/audio/robobeat-unlock.mp3').toString('base64');
+ const decoded=await js("(async()=>{const bytes=Uint8Array.from(atob('"+encoded+"'),c=>c.charCodeAt(0));const audio=await new OfflineAudioContext(1,1,44100).decodeAudioData(bytes.buffer);return audio.duration;})()");assert.ok(decoded>0);console.log('Unlock MP3 decoded:',decoded.toFixed(2),'seconds');
+ assert.equal(await js("!!document.querySelector('[data-deck-choice=robobeat]')"),false);
+ await js("document.getElementById('deck-connect-button').click();document.getElementById('udp-port').value='robobeat';document.getElementById('udp-port').dispatchEvent(new Event('input'))");
+ await until("document.getElementById('deck-stage').dataset.deck==='robobeat'");
+ assert.equal(await js("JSON.parse(localStorage.getItem('drivedeck-preview')).port"),4444);assert.equal(await js('window.__unlockPlays'),1);assert.match(await js('window.__unlockSource'),/robobeat-unlock\.mp3$/);assert.equal(await js("!!document.querySelector('[data-deck-choice=robobeat]')"),true);
+ fs.mkdirSync('artifacts/new-decks',{recursive:true});
+ const shot=async(name,deck)=>{await delay(180);const bounds=await js("(()=>{const r=document.getElementById('"+deck+"-deck').getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}})()");await win.webContents.capturePage();await delay(250);const img=await win.webContents.capturePage(bounds);fs.writeFileSync('artifacts/new-decks/'+name+'.png',img.toPNG());if(name===deck)fs.writeFileSync('src/renderer/assets/decks/'+deck+'.png',img.resize({width:720}).toPNG());};
+ await delay(3400);await shot('robobeat','robobeat');
+ await js("document.querySelector('[data-deck-choice=martin]').click()");await until("document.getElementById('deck-stage').dataset.deck==='martin'");await shot('martin','martin');
+ for(const view of ['map','map3d','tires','artwork']){await js("document.getElementById('martin-center').value='"+view+"';document.getElementById('martin-center').dispatchEvent(new Event('change'))");await until("JSON.parse(localStorage.getItem('drivedeck-preview')).martinCenter==='"+view+"'");await shot('martin-'+view,'martin');assert.equal(await js("document.getElementById('"+(view==='artwork'?'martin-art':view==='tires'?'martin-tires':'martin-map-panel')+"').hidden"),false);}
+ win.setContentSize(1280,800);await shot('martin-steam-deck','martin');win.setContentSize(2560,720);await shot('martin-edge','martin');
+ assert.deepEqual(errors,[]);console.log('PASS secret unlock, unchanged port, sound request, all Martin center views, screenshots and thumbnails.');app.exit(0);
+}).catch(error=>{console.error(error);app.exit(1);});

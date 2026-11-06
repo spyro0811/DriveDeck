@@ -6,6 +6,11 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const finite = (n, min, max) => Number.isFinite(n) && n >= min && n <= max;
 const text = (packet, offset, size) => packet.subarray(offset, offset + size).toString('utf8').split('\0')[0].trim();
 
+function decodeTirePacket(packet){
+  if(!Buffer.isBuffer(packet)||packet.length>2048||packet.toString('ascii',0,4)!=='DDT1')return null;
+  try{const data=JSON.parse(packet.toString('utf8',4));if(typeof data.vehicleId!=='string'||!/^[a-z0-9_-]{1,48}$/i.test(data.vehicleId)||!data.pressures||typeof data.pressures!=='object'||Array.isArray(data.pressures))return null;
+  const pressures={};for(const key of ['FL','FR','RL','RR']){if(data.pressures[key]===undefined)continue;if(!finite(data.pressures[key],0,3000))return null;pressures[key]=data.pressures[key];}return {vehicleId:data.vehicleId,pressures};}catch{return null;}
+}
 function decodePacket(packet) {
   if (!Buffer.isBuffer(packet)) return null;
   if (packet.length === 196 && packet.toString('ascii', 0, 4) === 'DDK2') {
@@ -73,6 +78,7 @@ class Telemetry extends EventEmitter {
     this.received = 0;
     this.error = null;
     this.data = {};
+    this.tires=null;this.tiresAt=0;
     this.vehicleAt = 0;
     this.mapFeed = new MapFeed();
   }
@@ -102,12 +108,14 @@ class Telemetry extends EventEmitter {
     this.vehicleAt = 0;
     this.received = 0;
     this.data = {};
+    this.tires=null;this.tiresAt=0;
     this.error = null;
     this.mapFeed.clear();
     if (previous) previous.close();
   }
 
   accept(packet, now = Date.now()) {
+    if(Buffer.isBuffer(packet)&&packet.toString('ascii',0,4)==='DDT1'){const tires=decodeTirePacket(packet);if(!tires)return false;this.tires=tires;this.tiresAt=now;return true;}
     if (Buffer.isBuffer(packet) && packet.toString('ascii', 0, 4) === 'DDM1') return this.mapFeed.accept(packet, now);
     const decoded = decodePacket(packet);
     if (!decoded) return false;
@@ -134,6 +142,7 @@ class Telemetry extends EventEmitter {
       selectedGear: vehicleFresh ? this.data.selectedGear : null,
       ambientTemp: vehicleFresh ? this.data.ambientTemp : null,
       odometer: vehicleFresh ? this.data.odometer : null,
+      tirePressures:vehicleFresh&&this.tires?.vehicleId===this.data.vehicleId&&now-this.tiresAt<2000?this.tires.pressures:null,
       connected, ageMs, received: this.received, port: this.port,
       error: this.error,
     };
@@ -147,4 +156,4 @@ class Telemetry extends EventEmitter {
   }
 }
 
-module.exports = { Telemetry, decodePacket };
+module.exports = { Telemetry, decodePacket, decodeTirePacket };

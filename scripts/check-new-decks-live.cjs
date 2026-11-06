@@ -1,0 +1,20 @@
+const {app}=require('electron'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),dgram=require('node:dgram'),{companionV2}=require('../test/fixtures.cjs');
+app.disableHardwareAcceleration();process.env.DRIVEDECK_DATA_DIR=path.resolve('.runtime/new-decks-live');fs.mkdirSync(process.env.DRIVEDECK_DATA_DIR,{recursive:true});
+let sender,timer;
+app.on('browser-window-created',(_event,win)=>{win.show=()=>{};const js=s=>win.webContents.executeJavaScript(s),delay=ms=>new Promise(r=>setTimeout(r,ms));win.webContents.once('did-finish-load',async()=>{const until=async code=>{for(let i=0;i<150;i++){if(await js(code))return;await delay(50);}throw Error('Timed out: '+code);};try{
+ await until("document.getElementById('app').dataset.ready==='true'");
+ await js("window.__plays=0;HTMLMediaElement.prototype.play=function(){if(this instanceof HTMLAudioElement)window.__plays++;return Promise.resolve();};AudioContext.prototype.resume=()=>Promise.resolve();void 0;");
+ const initial=await js('window.driveDeck.bootstrap()'),port=initial.settings.port;
+ await js("document.getElementById('deck-connect-button').click();document.getElementById('udp-port').value='robobeat';document.getElementById('udp-port').dispatchEvent(new Event('input'))");
+ await until("document.getElementById('deck-stage').dataset.deck==='robobeat'");
+ assert.equal((await js('window.driveDeck.bootstrap()')).settings.port,port);assert.equal(await js('window.__plays'),1);
+ await js("window.driveDeck.updateSettings({deck:'martin',martinCenter:'tires',demo:false,autoDeck:false})");
+ sender=dgram.createSocket('udp4');timer=setInterval(()=>{sender.send(companionV2({vehicleId:'vivace',speed:30,rpm:6400}),port,'127.0.0.1');sender.send(Buffer.from('DDT1'+JSON.stringify({vehicleId:'vivace',pressures:{FL:230,FR:231,RL:245,RR:0}})),port,'127.0.0.1');},40);
+ await until("document.getElementById('martin-FL').textContent==='33.4'&&document.getElementById('martin-RR').textContent==='0.0'");
+ assert.equal(JSON.parse(fs.readFileSync(path.join(process.env.DRIVEDECK_DATA_DIR,'settings.json'))).robobeatUnlocked,true);
+ await js("window.driveDeck.updateSettings({deck:'robobeat'})");await until("document.getElementById('rb-rank').textContent==='RHYTHM GOD'");
+ clearInterval(timer);timer=null;await until("document.getElementById('rb-speed').textContent==='—'");
+ await js("window.driveDeck.updateSettings({deck:'martin',martinCenter:'tires'})");await until("document.getElementById('martin-FL').textContent==='—'");
+ console.log('PASS actual preload/IPC unlock, persisted port and secret, UDP tire pressures, RPM rank and disconnect clearing.');app.quit();
+ }catch(error){console.error(error);app.exit(1);}finally{clearInterval(timer);sender?.close();}});});
+const reserve=dgram.createSocket('udp4');reserve.bind(0,'127.0.0.1',()=>{const port=reserve.address().port;reserve.close(()=>{fs.writeFileSync(path.join(process.env.DRIVEDECK_DATA_DIR,'settings.json'),JSON.stringify({port,deck:'ultra',demo:false,autoDeck:false,animatedArtwork:false}));require('../src/main.cjs');});});

@@ -1,3 +1,6 @@
+import {BassPulse} from './audio.mjs';
+import {ROBOBEAT_DECK,robobeatMarkup,UnlockSound,RobobeatView} from './robobeat.mjs';
+import {martinMarkup,MartinView} from './martin.mjs';
 import {ARCH_DECK,archMarkup,updateArch} from './arch.mjs';
 import {m235Markup,updateM235} from './m235.mjs';
 import { vehicleVisual } from './vehicle-identity.mjs';
@@ -13,6 +16,7 @@ import { MapCanvas } from './map.mjs';
 import { clamp, gearLabel, durationLabel } from './model.mjs';
 
 export const DECKS = [
+  {id:'martin',name:'Martin',note:'Teal circular instruments. Artwork, navigation or tire pressure at the center.'},
   { id: 'm235', name: 'M235', note: 'Angular instruments, orange illumination, and a central digital speed display.' },
   { id: 'model-s', name: 'Model S', note: 'Minimal instruments. Your BeamNG model, with a dedicated Park view.' },
   { id: 'model-three', name: 'Model Three', note: 'A light vehicle panel and live navigation, made for the EDGE.' },
@@ -26,7 +30,7 @@ export const DECKS = [
   { id: 'pure', name: 'Ultra Pure', note: 'A light, pared-back digital cockpit.' },
   { id: 'vivace', name: 'Vivace S', note: 'The Cherrier cluster, synced to drive mode.' },
 ];
-export const decksForPlatform=platform=>platform==='linux'?[...DECKS,ARCH_DECK]:DECKS;
+export const decksForPlatform=(platform,unlocked=false)=>[...DECKS,...(platform==='linux'?[ARCH_DECK]:[]),...(unlocked?[ROBOBEAT_DECK]:[])];
 const MODES = {
   comfort: { label: 'COMFORT', color: '#6acfff', base: '#1e7ccc' },
   sport: { label: 'SPORT', color: '#ff2924', base: '#8f0101' },
@@ -111,6 +115,8 @@ export class DeckView {
       <div class="ultra-bottom"><div class="ultra-vehicle"><span class="ultra-vehicle-symbol">${icon('car')}</span><div><strong id="ultra-vehicle">BeamNG.drive</strong><span id="ultra-system">Ready for your next drive</span></div></div><div id="ultra-media-slot"></div><div class="ultra-journey"><strong id="ultra-trip">0.0 mi</strong><span id="ultra-time">00:00 this drive</span></div></div>
     </section>
     <section class="vivace-deck" id="vivace-deck" hidden><div class="vivace-heading"><span><b>CHERRIER</b><small>VIVACE S</small></span><span id="vivace-sync-status">WAITING FOR VEHICLE</span><span class="vivace-s">S</span></div><div class="vivace-cluster">${vivaceSVG()}</div><div class="vivace-bottom"><span id="vivace-warnings">SYSTEMS NORMAL</span><div id="vivace-media-slot"></div><span class="vivace-label">CHERRIER · DIGITAL COCKPIT</span></div></section>
+    ${martinMarkup()}
+    ${robobeatMarkup()}
     ${archMarkup()}
     ${m235Markup()}
     ${iadnuyhMarkup()}
@@ -124,6 +130,8 @@ export class DeckView {
     this.ids['sound-seek'].oninput=()=>{this.seeking=true;this.text('sound-elapsed',durationLabel(this.seekDuration*Number(this.ids['sound-seek'].value)/100));};
     this.ids['sound-seek'].onchange=()=>{this.seeking=false;if(!this.ids['sound-seek'].disabled)actions.seek?.(this.seekDuration*Number(this.ids['sound-seek'].value)/100);};
     this.ids['sound-seek'].onblur=this.ids['sound-seek'].onpointercancel=()=>{this.seeking=false;};
+    this.bassPulse=new BassPulse();this.flash=document.createElement("div");this.flash.className="bass-screen-flash";this.flash.setAttribute("aria-hidden","true");root.append(this.flash);
+    this.unlockSound=new UnlockSound();this.robobeat=new RobobeatView(this.ids,this.unlockSound);this.martin=new MartinView(this.ids,actions);
     this.tesla=new TeslaDecks(this.ids,actions);
     this.motionPlayers=[new MotionArtwork(this.ids['sound-motion'],actions.animationFailed),new MotionArtwork(this.ids['deck-motion'],actions.animationFailed)];
     this.palette=DEFAULT_PALETTE;this.paletteSource=null;this.paletteRequest=0;
@@ -146,6 +154,8 @@ export class DeckView {
   text(id, value) { const e=this.ids[id]; if (e.textContent!==String(value)) e.textContent=value; }
   update({ settings, data, map, media, audio, animation, rpm, speed, maxRpm, trip, now }) {
     const deck = resolveDeck(settings,data);
+    for(const view of [this.audio,this.levels,this.barLevels,this.songLevels,this.martin.levels])view.motionAmount=settings.visualizerMotion??100;
+    this.flash.style.opacity=String(this.bassPulse.step(this.unlockSound.spectrum()||audio,now,settings.robobeatUnlocked===true&&settings.bassFlash===true&&(!settings.demo||this.unlockSound.playing)));
     for(const player of this.motionPlayers)player.update(animation,media,deck!=='classic'&&!settings.demo&&settings.animatedArtwork);
     if (deck==='classic') { this.root.hidden=true; this.renderMedia(media,settings.demo); return; }
     this.root.hidden=false;
@@ -154,10 +164,10 @@ export class DeckView {
     this.root.dataset.mapAppearance=settings.mapAppearance === 'light' ? 'light' : 'dark';
     if (deck!==this.deck) {
       this.deck=deck; this.root.dataset.deck=deck;
-      this.ids['arch-deck'].hidden=deck!=='arch';this.ids['m235-deck'].hidden=deck!=='m235';
+      if(this.deckBefore==='robobeat'&&deck!=='robobeat')this.unlockSound.stop();this.deckBefore=deck;this.ids['robobeat-deck'].hidden=deck!=='robobeat';this.ids['martin-deck'].hidden=deck!=='martin';this.ids['arch-deck'].hidden=deck!=='arch';this.ids['m235-deck'].hidden=deck!=='m235';
       this.ids['model-s-deck'].hidden=deck!=='model-s';this.ids['model-three-deck'].hidden=deck!=='model-three';
-      this.ids['ultra-deck'].hidden=['arch','m235','model-s','model-three','civetta','vivace','iadnuyh','homosexual'].includes(deck); this.ids['iadnuyh-deck'].hidden=deck!=='iadnuyh'; this.ids['homosexual-deck'].hidden=deck!=='homosexual'; this.ids['civetta-deck'].hidden=deck!=='civetta'; this.planarG.reset(); this.ids['vivace-deck'].hidden=deck!=='vivace';
-      this.ids[deck==='arch'?'arch-media-slot':deck==='m235'?'m235-media-slot':deck==='model-s'?'model-s-media-slot':deck==='model-three'?'model-three-media-slot':deck==='civetta'?'civetta-media-slot':deck==='homosexual'?'homosexual-media-slot':deck==='iadnuyh'?'iadnuyh-media-slot':deck==='vivace'?'vivace-media-slot':'ultra-media-slot'].append(this.ids['deck-media']);
+      this.ids['ultra-deck'].hidden=['martin','robobeat','arch','m235','model-s','model-three','civetta','vivace','iadnuyh','homosexual'].includes(deck); this.ids['iadnuyh-deck'].hidden=deck!=='iadnuyh'; this.ids['homosexual-deck'].hidden=deck!=='homosexual'; this.ids['civetta-deck'].hidden=deck!=='civetta'; this.planarG.reset(); this.ids['vivace-deck'].hidden=deck!=='vivace';
+      this.ids[deck==='martin'?'martin-media-slot':deck==='robobeat'?'robobeat-media-slot':deck==='arch'?'arch-media-slot':deck==='m235'?'m235-media-slot':deck==='model-s'?'model-s-media-slot':deck==='model-three'?'model-three-media-slot':deck==='civetta'?'civetta-media-slot':deck==='homosexual'?'homosexual-media-slot':deck==='iadnuyh'?'iadnuyh-media-slot':deck==='vivace'?'vivace-media-slot':'ultra-media-slot'].append(this.ids['deck-media']);
     }
     const sound=deck==='sound';this.ids['sound-bottom-controls'].hidden=!sound;
     const transport=this.ids['deck-play'].closest('.deck-transport'),destination=sound?this.ids['sound-bottom-controls']:this.ids['deck-media'];
@@ -167,6 +177,8 @@ export class DeckView {
     this.ids['deck-levels'].hidden=!barVisualizer;
     if(barVisualizer)this.barLevels.draw(audio,now,settings.demo,media.playing);
     if(['model-s','model-three'].includes(deck))this.tesla.update({deck,settings,data,map,rpm,speed,now});
+    if(deck==='martin')this.martin.update({settings,data,rpm,speed,maxRpm,map,media,audio,now,trip},this.palette);
+    if(deck==='robobeat')this.robobeat.update({settings,data,rpm,speed,maxRpm,audio,media,now});
     if(deck==='arch')updateArch(this.ids,{settings,data,rpm,speed,maxRpm});
     if(deck==='m235')updateM235(this.ids,{settings,data,rpm,speed,maxRpm});
     if(deck==='civetta')updateCivetta(this.ids,{settings,data,map,rpm,speed,now},this.planarG);
@@ -200,9 +212,9 @@ export class DeckView {
       this.text('sound-motion-label',animation?.source==='apple'?'APPLE MUSIC':'LOCAL CANVAS CLIP');
       const coverCaption=animatedCover?(animation?.source==='apple'?'APPLE MUSIC · ANIMATED COVER':'LOCAL CANVAS CLIP'):'WINDOWS MEDIA · ALBUM ART';
       const fresh=audio?.available && Date.now()-audio.updatedAt<600;
-      this.text('sound-status',settings.demo?'DEMO · SIMULATED MEDIA':!visual&&!settings.songVisualizer?coverCaption:audio?.error?'AUDIO UNAVAILABLE · SWITCH TO ART AND BACK TO RETRY':audio?.starting?'CONNECTING TO AUDIO OUTPUT':fresh?audio.bands?.some(v=>v>.025)?'SYSTEM AUDIO · LIVE':'SYSTEM AUDIO · WAITING FOR SOUND':'CONNECTING TO AUDIO OUTPUT');
+      this.text('sound-status',settings.demo?'DEMO · SIMULATED MEDIA':!visual&&!settings.songVisualizer?coverCaption:audio?.error?'AUDIO UNAVAILABLE · SWITCH TO ART AND BACK TO RETRY':audio?.starting?'CONNECTING TO AUDIO OUTPUT':fresh?audio.bands?.some(v=>v>.025)?settings.excludeBeamngAudio===false?'SYSTEM AUDIO · LIVE':'MUSIC AUDIO · LIVE':'WAITING FOR MUSIC':'CONNECTING TO AUDIO OUTPUT');
     }
-    if (!['arch','m235','model-s','model-three','civetta','homosexual','iadnuyh','vivace','sound','levels'].includes(deck)) this.map.draw(map,{...settings,atlasView:deck==='atlas'?settings.atlasView:'2d'},now);
+    if (!['martin','robobeat','arch','m235','model-s','model-three','civetta','homosexual','iadnuyh','vivace','sound','levels'].includes(deck)) this.map.draw(map,{...settings,atlasView:deck==='atlas'?settings.atlasView:'2d'},now);
     if(!['sound','levels'].includes(deck))this.applyGaugePalette(deck);
     if(now-this.slowAt<90)return; this.slowAt=now;
     this.text('ultra-unit',settings.units==='kmh'?'km/h':'mph');

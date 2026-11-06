@@ -14,7 +14,7 @@ cd "$APP_DIR"
 exec "$APP_DIR/drivedeck" "$@"
 '''
 (app / 'AppRun').write_text(launcher, encoding='utf-8', newline='\n')
-(app / 'READ ME FIRST.txt').write_text('''DriveDeck — experimental Steam Deck package
+(app / 'READ ME FIRST.txt').write_text('''DriveDeck — Music sync and Martin preview
 
 1. On the Steam Deck, switch to Desktop Mode.
 2. Extract the entire archive into your home folder or Downloads.
@@ -36,12 +36,13 @@ Music must be playing on the Deck. The app uses playerctl or systemd busctl for
 MPRIS music and parec or PipeWire pw-cat for the output visualizer, when available.
 No SteamOS system modifications, sudo commands or sandbox-disabling flags are used.
 
-This build has not yet been tested on Steam Deck hardware. Basic startup, audio,
-game integration, graphics and Gaming Mode still need device testing.
+Earlier builds have basic Steam Deck telemetry, audio and navigation feedback.
+These new decks and tire-pressure integration still need device testing.
+Martin is in the deck library. Reinstall the bundled companion for live tire data.
 If launch fails, send the error. Do not run the app as root or disable its sandbox.
 Automatic Linux updates are not enabled; replace this folder for future versions.
 ''', encoding='utf-8', newline='\n')
-archive = root / 'dist/DriveDeck-SteamDeck-experimental-4-x64.tar.gz'
+archive = root / 'dist/DriveDeck-SteamDeck-preview-0.20.2-4-x64.tar.gz'
 def permissions(info):
     executable = info.isdir() or info.name.endswith(('/drivedeck', '/AppRun', '/chrome-sandbox', '/chrome_crashpad_handler')) or info.name.endswith('.so')
     info.mode = 0o755 if executable else 0o644

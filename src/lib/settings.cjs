@@ -3,8 +3,9 @@ const path = require('node:path');
 
 const THEMES = ['aura', 'etk', 'hirochi', 'ibishu', 'bmw', 'porsche', 'ferrari', 'custom'];
 const WIDGETS = ['media', 'vehicle', 'journey'];
-const DECKS = ['m235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
+const DECKS = ['martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
 const DEFAULTS = Object.freeze({
+  excludeBeamngAudio:true, visualizerMotion:100, bassFlash:false,
   theme: 'aura', autoTheme: true, units: 'mph', layout: 'touring', deck: 'ultra', autoDeck: false,
   animatedArtwork: true, animationOrder: ['canvas','apple'], canvasEnabled: true, appleEnabled: true,
   miniPlayerView: 'visualizer', songVisualizer: false, audioView: 'artwork', mapZoom: 1, mapAppearance: 'dark', atlasView: '2d', mapTerrain: true, mapHeadingUp: true, demoDriveMode: 'comfort', civettaPage: 'auto',
@@ -27,10 +28,15 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     if (/^[a-z0-9_-]{1,64}$/i.test(key) && THEMES.includes(theme) && !['__proto__', 'constructor', 'prototype'].includes(key)) mappings[key.toLowerCase()] = theme;
   }
   return {
+    excludeBeamngAudio:input.excludeBeamngAudio!==false,
+    visualizerMotion:number('visualizerMotion',0,200),
+    bassFlash:input.robobeatUnlocked===true&&input.bassFlash===true,
     animatedArtwork: input.animatedArtwork !== false,
     animationOrder: Array.isArray(input.animationOrder) && input.animationOrder[0] === 'apple' ? ['apple','canvas'] : ['canvas','apple'],
     canvasEnabled: input.canvasEnabled !== false, appleEnabled: input.appleEnabled !== false,
-    deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')) ? input.deck : DEFAULTS.deck,
+    deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')||(input.deck==='robobeat'&&input.robobeatUnlocked===true)) ? input.deck : DEFAULTS.deck,
+    robobeatUnlocked:input.robobeatUnlocked===true,
+    martinCenter:['artwork','map','map3d','tires'].includes(input.martinCenter)?input.martinCenter:'artwork',
     songVisualizer: input.songVisualizer === true,
     miniPlayerView: 'visualizer',
     audioView: input.audioView === 'visualizer' ? 'visualizer' : 'artwork',

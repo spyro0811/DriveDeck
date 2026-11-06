@@ -1,6 +1,6 @@
 const {MobileMap}=require('./mobile-map.cjs');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
-const MIME={'.html':'text/html','.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.json':'application/json'};
+const MIME={'.html':'text/html','.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.json':'application/json','.otf':'font/otf'};
 class MobileServer {
   constructor({root,snapshot,map,preview}){Object.assign(this,{root,snapshot,map,preview});this.server=null;this.token=null;this.pairCode=null;this.pairAttempts=[];this.mapSync=new MobileMap();}
   status(){const port=this.server?.address()?.port;const addresses=Object.values(os.networkInterfaces()).flat().filter(a=>a&&a.family==='IPv4'&&!a.internal).map(a=>a.address);return {running:!!port,links:port?addresses.map(ip=>`http://${ip}:${port}/#${this.token}`):[],port:port||null,pairingCode:port?this.pairCode:null};}
