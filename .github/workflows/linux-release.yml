@@ -98,7 +98,7 @@ jobs:
           if gh release view "$tag" --repo "$repo" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             node -e "if(!require(process.env.RUNNER_TEMP+'/release.json').isDraft)process.exit(1)"
           else
-            gh release create "$tag" --repo "$repo" --target "$GITHUB_SHA" --draft --latest=false --title "DriveDeck $DD_VERSION — Linux & Steam Deck" --notes-file "$notes"
+            gh release create "$tag" --repo "$repo" --target "$GITHUB_SHA" --draft --latest=false --title "DriveDeck $DD_VERSION — Linux" --notes-file "$notes"
           fi
           gh release edit "$tag" --repo "$repo" --latest=false --notes-file "$notes"
           gh release upload "$tag" --repo "$repo" --clobber "dist/DriveDeck-$DD_VERSION-x64.AppImage" "dist/DriveDeck-$DD_VERSION-amd64.deb" "dist/DriveDeck-$DD_VERSION-linux-x64.tar.gz" dist/latest-linux.yml dist/SHA256SUMS.txt LINUX-QUICKSTART.md

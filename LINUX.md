@@ -1,6 +1,6 @@
 # Experimental Linux development
 
-This is an experimental Linux port. A local Steam Deck portable package has been built; it has not been published as a general Linux release. Initial Steam Deck feedback confirms telemetry and audio work, while companion integration is still being checked. The shared decks, local UDP telemetry, map and phone server remain the same code as Windows. Native desktop, live BeamNG integration, display behavior and packaging still need validation on Linux hardware.
+DriveDeck is available for x86-64 Linux desktops as an AppImage, Debian package and portable archive. The shared decks, local UDP telemetry, map and phone server use the same code as Windows. Automated Ubuntu checks cover the source UI, Martin rendering, packaged AppImage startup and live UDP gauges. Broader Linux distribution and hardware coverage still needs validation.
 
 ## Running the source on a Linux desktop
 

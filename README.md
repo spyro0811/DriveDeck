@@ -125,6 +125,6 @@ For manual pairing, use **Connect** on the phone and enter the PC address (inclu
 Settings → Display includes resolution presets and custom dimensions. Apply resolution exits fullscreen, changes the window size, and saves the size for next launch. These controls are included in the regular installer source as well as portable builds.
 
 
-## Linux and Steam Deck
+## Linux
 
-Linux packages are prepared for x86-64 desktops and Steam Deck. See [LINUX-QUICKSTART.md](LINUX-QUICKSTART.md) for installation and companion setup, or [LINUX.md](LINUX.md) for development details. The AppImage supports in-app updates; Debian and portable packages update manually. Linux includes the exclusive Arch BTW deck. Linux-only releases do not replace the Windows update destination. Distribution coverage remains limited.
+Linux packages are prepared for x86-64 Linux desktops. See [LINUX-QUICKSTART.md](LINUX-QUICKSTART.md) for installation and companion setup, or [LINUX.md](LINUX.md) for development details. The AppImage supports in-app updates; Debian and portable packages update manually. Linux includes the exclusive Arch BTW deck. Linux-only releases do not replace the Windows update destination. Distribution coverage remains limited.

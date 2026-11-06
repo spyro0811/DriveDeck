@@ -1,10 +1,10 @@
-# DriveDeck for Linux and Steam Deck
+# DriveDeck for Linux
 
-Download the **x64 AppImage** for Steam Deck or another x86-64 Linux desktop. Save it in a permanent folder you can write to. In your file manager, open Properties → Permissions and allow the file to run as a program, then open it. Run DriveDeck natively; do not enable Proton for DriveDeck. You may add the AppImage to Steam as a non-Steam game.
+Download the **x64 AppImage** for your x86-64 Linux desktop. Save it in a permanent folder you can write to. In your file manager, open Properties → Permissions and allow the file to run as a program, then open it. Run DriveDeck natively; do not enable Proton for DriveDeck. You may add the AppImage to Steam as a non-Steam game.
 
 The AppImage supports update checks, downloads and **Restart and install** inside DriveDeck. Downloads and restarts require your click. Settings are preserved. Experimental portable builds need one manual download of this AppImage to gain in-app updating.
 
-The Debian package is for Debian/Ubuntu systems, not SteamOS. The `.tar.gz` archive is a portable fallback: extract it and launch `drivedeck`. Debian and extracted portable packages use manual updates. SteamOS users should not modify the read-only system to install the Debian package.
+The Debian package is for Debian/Ubuntu systems. The `.tar.gz` archive is a portable fallback: extract it and launch `drivedeck`. Debian and extracted portable packages use manual updates.
 
 ## BeamNG companion
 
@@ -20,4 +20,4 @@ Use a desktop music player that exposes MPRIS. DriveDeck reads playback state th
 
 **Arch BTW** is in the Linux deck library: analog RPM, speed, gear, and “I use arch btw”.
 
-This first Linux release has limited distribution coverage. Steam Deck feedback confirms basic telemetry, audio and navigation; report your OS, BeamNG compatibility mode and package type with any problem.
+This first Linux release has limited distribution coverage. Report your Linux distribution, BeamNG compatibility mode and package type with any problem.
