@@ -27,7 +27,20 @@ local function discover()
     local configName=type(config.partConfigFilename)=='string' and config.partConfigFilename:lower() or ''
     local knownBody=type(body)=='string' and body~=''
     local ardente=(knownBody and body:lower():find('ardente',1,true)) or (not knownBody and (configName:find('ardente',1,true) or vehicleName:lower():find('ardente',1,true)))
-    vehicleName=ardente and 'Cherrier Ardente' or 'Cherrier Vivace'
+    local trim=parts.vivace_bumper_R or parts.vivace_lettering
+    local knownTrim=type(trim)=='string' and trim~=''
+    local tograc=(knownTrim and trim:lower():find('tograc',1,true)) or (not knownTrim and (configName:find('tograc',1,true) or vehicleName:lower():find('tograc',1,true)))
+    vehicleName=ardente and 'Cherrier Ardente' or tograc and 'Cherrier Tograc' or 'Cherrier Vivace'
+  elseif vehicleId=='md_series' then
+    local config=v and v.config or {}
+    local parts=config.parts or {}
+    local active=v and v.data and v.data.activeParts or {}
+    local bus=(type(parts.schoolbus_body_b)=='string' and parts.schoolbus_body_b~='') or (type(parts.schoolbus_body_c)=='string' and parts.schoolbus_body_c~='') or active.schoolbus_body_b or active.schoolbus_body_c
+    if not next(parts) and not bus then
+      local fallback=tostring(config.partConfigFilename or ''):lower()..' '..vehicleName:lower()
+      bus=fallback:find('schoolbus',1,true) or fallback:find('bus',1,true)
+    end
+    vehicleName=bus and 'Gavril MD-Series Bus' or 'Gavril MD-Series'
   end
   engine = nil
   if powertrain and powertrain.getDevicesByType then

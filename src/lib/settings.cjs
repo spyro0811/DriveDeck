@@ -5,7 +5,7 @@ const THEMES = ['aura', 'etk', 'hirochi', 'ibishu', 'bmw', 'porsche', 'ferrari',
 const WIDGETS = ['media', 'vehicle', 'journey'];
 const DECKS = ['martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
 const DEFAULTS = Object.freeze({
-  excludeBeamngAudio:true, visualizerMotion:100, bassFlash:false,
+  mobilePort:49259, mobileLanding:false, excludeBeamngAudio:true, visualizerMotion:100, bassFlash:false,
   theme: 'aura', autoTheme: true, units: 'mph', layout: 'touring', deck: 'ultra', autoDeck: false,
   animatedArtwork: true, animationOrder: ['canvas','apple'], canvasEnabled: true, appleEnabled: true,
   miniPlayerView: 'visualizer', songVisualizer: false, audioView: 'artwork', mapZoom: 1, mapAppearance: 'dark', atlasView: '2d', mapTerrain: true, mapHeadingUp: true, demoDriveMode: 'comfort', civettaPage: 'auto',
@@ -28,6 +28,8 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     if (/^[a-z0-9_-]{1,64}$/i.test(key) && THEMES.includes(theme) && !['__proto__', 'constructor', 'prototype'].includes(key)) mappings[key.toLowerCase()] = theme;
   }
   return {
+    mobilePort:number('mobilePort',1024,65535),
+    mobileLanding:input.mobileLanding===true,
     excludeBeamngAudio:input.excludeBeamngAudio!==false,
     visualizerMotion:number('visualizerMotion',0,200),
     bassFlash:input.robobeatUnlocked===true&&input.bassFlash===true,

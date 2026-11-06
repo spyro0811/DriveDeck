@@ -1,5 +1,42 @@
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080c12;color:#e7eef6;font:14px system-ui}body{display:flex;flex-direction:column}.phone-toolbar{display:flex;align-items:center;gap:10px;padding:10px max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));flex-wrap:wrap;background:#111b26}.phone-toolbar strong{color:#d5f38a}#connection{margin-right:auto;font-size:12px}button{min-height:44px;border:1px solid #3d5164;border-radius:10px;background:#1a2937;color:#eef5ff;padding:8px 14px;font:inherit;touch-action:manipulation}#viewport{position:relative;flex:1;min-height:0;overflow:hidden}#stage{position:absolute;transform-origin:0 0;background:#080c12}#hint{font-size:12px;color:#a8b8c9;text-align:center;padding:4px 12px;margin:0 0 env(safe-area-inset-bottom)}dialog{width:min(900px,90vw);max-height:85dvh;overflow:auto;background:#101c28;color:#e7eef6;border:1px solid #42556a;border-radius:18px}dialog::backdrop{background:#000b}dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px}#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}#cards button{padding:8px;text-align:left}#cards img{width:100%;display:block;border-radius:6px}#cards strong{display:block;padding:8px}#cards [aria-pressed=true]{border-color:#d5f38a}.deck-transport,.sound-bottom-controls{pointer-events:none;opacity:.5}@media(max-width:500px){.phone-toolbar{gap:6px}.phone-toolbar strong{width:100%}button{padding:8px 10px}}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080c12;color:#e7eef6;font:14px system-ui}body{display:flex;flex-direction:column}.phone-toolbar{display:flex;align-items:center;gap:10px;padding:max(10px,var(--phone-safe-top)) max(12px,var(--phone-safe-right),var(--phone-cutout-gutter)) 10px max(12px,var(--phone-safe-left),var(--phone-cutout-gutter));flex-wrap:wrap;background:#111b26}.phone-toolbar strong{color:#d5f38a}#connection{margin-right:auto;font-size:12px}button{min-height:44px;border:1px solid #3d5164;border-radius:10px;background:#1a2937;color:#eef5ff;padding:8px 14px;font:inherit;touch-action:manipulation}#viewport{position:relative;flex:1;min-height:0;overflow:hidden}#deck-area{position:absolute;inset:0 max(var(--phone-cutout-gutter),var(--phone-safe-right)) 0 max(var(--phone-cutout-gutter),var(--phone-safe-left))}#stage{position:absolute;transform-origin:0 0;background:#080c12}#hint{font-size:12px;color:#a8b8c9;text-align:center;padding:4px 12px;margin:0 0 env(safe-area-inset-bottom)}dialog{width:min(900px,90vw);max-height:85dvh;overflow:auto;background:#101c28;color:#e7eef6;border:1px solid #42556a;border-radius:18px}dialog::backdrop{background:#000b}dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px}#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}#cards button{padding:8px;text-align:left}#cards img{width:100%;display:block;border-radius:6px}#cards strong{display:block;padding:8px}#cards [aria-pressed=true]{border-color:#d5f38a}.deck-transport,.sound-bottom-controls{pointer-events:none;opacity:.5}@media(max-width:500px){.phone-toolbar{gap:6px}.phone-toolbar strong{width:100%}button{padding:8px 10px}}
 
-body{height:100dvh}body.immersive .phone-toolbar,body.immersive #hint{display:none}body.immersive #viewport{position:fixed;inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}#exit-fullscreen{position:fixed;z-index:100;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));background:#111b26d9;font-size:12px;min-height:36px;padding:6px 10px}#exit-fullscreen[hidden]{display:none}
+body{height:100dvh;--phone-safe-left:env(safe-area-inset-left,0px);--phone-safe-right:env(safe-area-inset-right,0px);--phone-safe-top:env(safe-area-inset-top,0px);--phone-safe-bottom:env(safe-area-inset-bottom,0px);--phone-cutout-gutter:0px}body.immersive .phone-toolbar,body.immersive #hint{display:none}body.immersive{--fullscreen-bar:clamp(24px,7dvh,40px);background:#000}body.immersive #viewport{position:fixed;inset:max(var(--fullscreen-bar),var(--phone-safe-top)) 0 max(var(--fullscreen-bar),var(--phone-safe-bottom));background:#080c12;border-block:1px solid #1a2430}body.immersive #deck-area{inset:0 max(var(--phone-cutout-gutter),calc(var(--phone-safe-right) + 8px)) 0 max(var(--phone-cutout-gutter),calc(var(--phone-safe-left) + 8px))}#exit-fullscreen{position:fixed;z-index:100;top:max(calc(var(--fullscreen-bar,0px) + 8px),var(--phone-safe-top));right:max(8px,var(--phone-safe-right));background:#111b26d9;font-size:12px;min-height:36px;padding:6px 10px}#exit-fullscreen[hidden]{display:none}
 
 #pair-form{max-width:440px;margin:auto}#pair-form label{display:block;margin:16px 0}#pair-form input{display:block;box-sizing:border-box;width:100%;font:18px system-ui;padding:12px;margin-top:6px;background:#08121c;color:#fff;border:1px solid #62788d;border-radius:8px}#pair-error{color:#ffb6ad}
+
+/* Martin fills the device directly instead of shrinking a desktop canvas. */
+.martin-mobile .martin-deck{border-radius:10px;box-sizing:border-box}
+.martin-mobile .martin-deck>header{height:46px;padding:4px 12px;gap:10px}
+.martin-mobile .martin-deck>header label{font-size:0;gap:0}
+.martin-mobile .martin-deck select{min-height:40px;max-width:210px;font-size:12px;padding:6px}
+.martin-mobile .martin-cluster{width:100%;padding:0 8px;gap:12px;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr) minmax(0,1fr)}
+.martin-mobile .martin-dial{width:min(100%,calc(100cqh - 4px));max-height:none}
+.martin-mobile .martin-middle{height:100%;max-height:none}
+.martin-mobile .martin-map-panel{height:100%;max-height:none}
+.martin-mobile .martin-cover{width:min(46cqh,180px)}
+.martin-mobile .martin-center-transport{display:none}
+.martin-mobile #martin-levels{height:24px;width:min(140px,80%)}
+.martin-mobile .martin-deck>footer{height:44px;min-height:0;padding:3px 12px;gap:0}
+.martin-mobile .martin-deck>footer>span{display:none}
+.martin-mobile .martin-deck>footer>div{width:100%}
+.martin-mobile .martin-deck .deck-media{width:100%;grid-template-columns:minmax(0,1fr) 55px;padding:4px 8px;gap:8px}
+.martin-mobile .martin-deck .deck-transport{display:none}
+.martin-mobile .martin-deck[data-center=artwork]>footer{height:10px;padding:0}
+.martin-mobile #stage[data-mobile-layout=portrait] .martin-cluster{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:min(44vw,260px) minmax(0,1fr);gap:12px}
+.martin-mobile #stage[data-mobile-layout=portrait] .martin-middle{grid-row:2;grid-column:1/-1;padding:0 8px 8px;box-sizing:border-box}
+.martin-mobile #stage[data-mobile-layout=portrait] .martin-dial:last-child{grid-column:2;grid-row:1}
+
+
+.martin-mobile #stage[data-mobile-layout=portrait] .martin-dial{width:min(100%,44vw,260px)}
+
+#connection-recovery{position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#080c12ed;text-align:center;box-sizing:border-box}#connection-recovery h2{font-size:22px;margin:0}#connection-recovery p{max-width:420px;color:#acbdcf;line-height:1.6;margin:0}#connection-recovery>div{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+/* Full-width display with deliberate black bars above and below; inset controls for cutouts. */
+body.immersive .martin-deck{border:0;border-radius:0}
+body.immersive.martin-mobile .martin-deck>header{padding-left:12px;padding-right:76px}
+body.immersive.martin-mobile .martin-cluster{padding-left:8px;padding-right:8px}
+body.immersive.martin-mobile .martin-deck>footer{padding-left:12px;padding-right:12px}
+
+/* Some embedded iOS browsers report zero safe-area insets. Keep a phone-sized
+   landscape gutter as a fallback, on either side after rotating the device. */
+@media (orientation:landscape) and (max-height:600px){body{--phone-cutout-gutter:44px}}

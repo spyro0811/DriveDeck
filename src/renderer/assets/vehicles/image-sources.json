@@ -1,0 +1,132 @@
+[
+  {
+    "file": "Stambecco.png",
+    "source": "autobello stambecco.png",
+    "sha256": "98d250fbe7472971103d81eecbbb5c59b9ecd8cc0f5eae29c8283e1b0bdb4c38"
+  },
+  {
+    "file": "Piccolina.png",
+    "source": "Autobello.png",
+    "sha256": "80a8b2825b8d01e0f631edad60b8483f16bde5f0e2af1243e00d6874eda98f07"
+  },
+  {
+    "file": "Bastion.png",
+    "source": "Bruckel Bastion.png",
+    "sha256": "b3957298ab0e5dffed6e048294bfb62c005b65bba3fcbf6e3ee8cf286c176c98"
+  },
+  {
+    "file": "LeGran.png",
+    "source": "Bruckell LeGran.png",
+    "sha256": "4c5f84104ef2b49a723f8736c55dfb9ba936359e8c640145c86bb6e589b1acff"
+  },
+  {
+    "file": "Moonhawk.png",
+    "source": "Bruckell Moonhawk.png",
+    "sha256": "9f2ee4ae5c50be596c1a9be3bc1f443f34d5e03527168e542742544b7fe21fe5"
+  },
+  {
+    "file": "Nine.png",
+    "source": "Bruckell Nine Deluxe coup.png",
+    "sha256": "2ab4721b63147835368d83aec537e7ceac089e3c1ecf8aefdf710ed750c6fe65"
+  },
+  {
+    "file": "Burnside.png",
+    "source": "Burnside Special.png",
+    "sha256": "6bf44648033ecb4943ca5d5d257f34628d29682eb0e09a4ca14fd3ea69052bfd"
+  },
+  {
+    "file": "Percheron.png",
+    "source": "Cherrier Percheron.png",
+    "sha256": "33398afd0f6d7f59bed53d5ef2dfe89e69dc5f56c33017d97fd6305a9b1b5f8f"
+  },
+  {
+    "file": "Tograc.png",
+    "source": "Cherrier tograc.png",
+    "sha256": "ed883cbc8c5a945f6e56bfa0f04a0b6bef1abd29d6881af41e85c508c49e706a"
+  },
+  {
+    "file": "Vivace.png",
+    "source": "Cherrier Vivaace.png",
+    "sha256": "4307c50d71cc0c3f8ecd234eb6b130fcac7e1f5fc3617c60249e69d9988df6d2"
+  },
+  {
+    "file": "Bolide.png",
+    "source": "Civetta Bolide.png",
+    "sha256": "0066d35fe6b23d3ad9791edd699473b03e1e7acb76140087393a97e8f8c4feff"
+  },
+  {
+    "file": "Civetta.png",
+    "source": "Civetta Cintilla.png",
+    "sha256": "ca214920b4dcf91c5005efba970928a4cd9c518d97a89786bc78c6116b5798aa"
+  },
+  {
+    "file": "ETK800.png",
+    "source": "ETK 800 series.png",
+    "sha256": "e353aa10e464531cd1b127a1cf2b1e984753f71511a654eea4bf175113106411"
+  },
+  {
+    "file": "ETKI.png",
+    "source": "ETK I Series.png",
+    "sha256": "bbfa259816cfb87c4f31c2bd64c81ac083c31dde649c1cc2a1281167f7d315e5"
+  },
+  {
+    "file": "Hydra.png",
+    "source": "FPU Hydra_atv.png",
+    "sha256": "1d49dabdb4dcd0ce7a304ea56f91b8c9fc8ddf536e67cdba1c0f01bfa52d5df1"
+  },
+  {
+    "file": "Barstow.png",
+    "source": "Gavril Barstow.png",
+    "sha256": "c9a25ed34024d8bd4b2cd69cda4c40a62150b8285375cebea0dbea416a7b039c"
+  },
+  {
+    "file": "Bluebuck.png",
+    "source": "Gavril BlueBuck.png",
+    "sha256": "9523473027be834e1f7e4d67a457a1ab051c7969c643c08f9f60bd85ac6c0601"
+  },
+  {
+    "file": "DSeries.png",
+    "source": "Gavril D Series.png",
+    "sha256": "462fe58da08689983600939ae0d83a68a65796b1ac4d51d07a4dd77502f8dd75"
+  },
+  {
+    "file": "GrandMarshal.png",
+    "source": "Gavril Grand Marshal.png",
+    "sha256": "d067537b421171fa182cc8815a9c241012d9ac6c32798ee782f980a078773fc8"
+  },
+  {
+    "file": "MDSeriesBus.png",
+    "source": "Gavril MD Series BUS.png",
+    "sha256": "c3a305d64c9f82ece19e60c22d38cb4470d1436e7e3d3ef96857ebdf1183c83f"
+  },
+  {
+    "file": "MDSeries.png",
+    "source": "Gavril MD-Series.png",
+    "sha256": "435433bd1440ac5a4ee4abd8c89dc598a1f25873963a28fca548853f1910bbd9"
+  },
+  {
+    "file": "Roamer.png",
+    "source": "Gavril Roamer.png",
+    "sha256": "2fb7cd9efa7ca2ac903e62da15bdc9414baf47aef9dde433cd886ea8abf4bc23"
+  },
+  {
+    "file": "TSeries.png",
+    "source": "Gavril T-Series_US_Semi.png",
+    "sha256": "fd3a8c6b470becf690aab8dcc3ff2c7c86a77299a47708d2a825472a12c0c606"
+  },
+  {
+    "file": "Aurata.png",
+    "source": "Hirochi Auruta_UTV.png",
+    "sha256": "b61d3292b878269aacc9262f671590d7e938c7687e82ec7ba0734214e8219940"
+  },
+  {
+    "file": "SBR4.png",
+    "source": "Hirochi SBR4.png",
+    "sha256": "15c66d7cd5b91386a6d0e88351d1e6ea631498ae61cdd155eb168f84c68304b8"
+  },
+  {
+    "file": "Sunburst.png",
+    "source": "Hirochi Sunburst.png",
+    "sha256": "637a114f0d91201e5a4737682014b7cc6f87f54f26de06a8dea0a0d136758f59"
+  }
+]

@@ -30,7 +30,7 @@ test('Album palette follows cover pixels and keeps monochrome covers neutral',as
  const {paletteFromPixels,DEFAULT_PALETTE}=await import('../src/renderer/palette.mjs');
  const pixels=[];for(let i=0;i<100;i++)pixels.push(...(i<50?[230,40,55,255]:i<80?[35,75,220,255]:[30,195,90,255]));
  assert.deepEqual(paletteFromPixels(pixels),['#e62837','#234bdc','#1ec35a']);
- for(const color of paletteFromPixels([0,0,0,255,255,255,255,255])){const rgb=color.slice(1).match(/../g).map(n=>parseInt(n,16));assert.equal(rgb[0],rgb[1]);assert.equal(rgb[1],rgb[2]);assert.ok(rgb[0]>=155);}
+ for(const color of paletteFromPixels([0,0,0,255,255,255,255,255])){const rgb=color.slice(1).match(/../g).map(n=>parseInt(n,16));assert.equal(rgb[0],rgb[1]);assert.equal(rgb[1],rgb[2]);}
  assert.deepEqual(paletteFromPixels([255,0,0,0]),DEFAULT_PALETTE);
 });
 
@@ -45,4 +45,16 @@ test('Six-bar motion attacks quickly, expands spectral dips, and settles to sile
  for(let i=0;i<40;i++)values=motion.step([0,0,0,0,0,0],16);
  assert.ok(values.every(v=>v<.002),'silence must settle without invented movement');
  assert.ok(motion.step([NaN,Infinity,-1,2,undefined,0],16).every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+});
+
+
+test('Album palette favors substantial hue families, lifts near-black for dark displays, and ignores tiny highlights',async()=>{
+ const {paletteFromPixels}=await import('../src/renderer/palette.mjs');
+ const pixels=[];const add=(rgb,n)=>{for(let i=0;i<n;i++)pixels.push(...rgb,255);};
+ add([4,2,3],650);add([75,5,40],110);add([110,10,60],100);add([150,20,85],100);add([255,255,255],20);add([0,255,0],10);add([100,80,60],10);
+ const palette=paletteFromPixels(pixels),accent=palette[0].slice(1).match(/../g).map(v=>parseInt(v,16));
+ assert.ok(accent[0]>accent[2]&&accent[2]>accent[1]*2,'Pink shades form the main accent');
+ assert.equal(palette[1],'#605e5f','Near-black becomes a visible muted gray');
+ assert.equal(palette[2],palette[1],'No unrelated third accent is invented');
+ assert.deepEqual(paletteFromPixels([0,0,0,255]),['#606060','#606060','#606060']);
 });

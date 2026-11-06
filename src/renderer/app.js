@@ -1,3 +1,4 @@
+import {renderMobilePairing} from './mobile-pairing.mjs';
 import {parsePortEntry} from './robobeat.mjs';
 import { UpdatesView } from './updates.mjs';
 import { AudioCanvas } from './audio.mjs';
@@ -383,7 +384,7 @@ async function boot() {
   const updateView=new UpdatesView(api);
   const initial = await api.bootstrap(); live = initial.telemetry || live; media = initial.media || media; displayList = initial.displays || []; fullscreen = initial.fullscreen;
   let mobileRunning=false;
-  function showMobile(state){mobileRunning=!!state.running;$('mobile-toggle').textContent=mobileRunning?'Stop phone dashboard':'Start phone dashboard';$('mobile-links').replaceChildren();if(state.error)$('mobile-links').textContent=state.error;else if(mobileRunning){if(!state.codes?.length)$('mobile-links').textContent='Connect this PC to Wi-Fi or Ethernet, then restart sharing.';for(const code of state.codes||[]){const row=document.createElement('figure');row.className='mobile-pairing';const image=document.createElement('img');image.src=code.image;image.alt='Scan with your phone camera to open DriveDeck';image.width=320;image.height=320;const caption=document.createElement('figcaption');caption.textContent='PC address: '+code.address;const key=document.createElement('input');key.readOnly=true;key.value=code.pairingCode;key.setAttribute('aria-label','Phone pairing code');key.style.width='100%';key.onclick=()=>key.select();const keyLabel=document.createElement('p');keyLabel.textContent='Pairing code · enter this on the phone Connect screen';row.append(image,caption,keyLabel,key);$('mobile-links').append(row);}}}
+  function showMobile(state){mobileRunning=!!state.running;$('mobile-toggle').textContent=mobileRunning?'Stop phone dashboard':'Start phone dashboard';renderMobilePairing($('mobile-links'),state);}
   if(api.openMobileInstructions)$('mobile-instructions').onclick=()=>api.openMobileInstructions();
   if(api.mobileStatus){showMobile(await api.mobileStatus());$('mobile-toggle').onclick=async()=>{const button=$('mobile-toggle');button.disabled=true;try{showMobile(await (mobileRunning?api.stopMobile():api.startMobile()));}finally{button.disabled=false;}};}
   animationState=initial.animation||animationState;renderAnimationStatus();

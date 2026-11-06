@@ -189,6 +189,11 @@ test('Companion identifies Ardente by selected body/config, not the shared Vivac
   vehiclePath=string.char(67,58,92)..'vehicles'..string.char(92)..'vivace'..string.char(92);m.reset();m.fillStruct(o,2);assert(o.vehicleId.value=='vivace','Proton Windows paths normalize to the correct vehicle ID')
   v.config.parts.vivace_body='vivace_body';v.config.partConfigFilename='vehicles/vivace/ardente_old_config.pc';m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Vivace','Selected body takes priority over filename')
   v.config.parts={};m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Ardente','Config fallback identifies shared-platform variants')
+   v.config.parts={vivace_body='vivace_body',vivace_bumper_R='tograc_bumper_R'};m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Tograc','Selected Tograc trim beats stale config filename')
+   v.config.parts.vivace_bumper_R='vivace_bumper_R';v.config.partConfigFilename='vehicles/vivace/tograc_old.pc';m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Cherrier Vivace','Selected Vivace trim beats stale Tograc filename')
+   vehiclePath='vehicles/md_series/';v.config={parts={schoolbus_body_b='schoolbus_body_b'}};m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Gavril MD-Series Bus')
+   v.config={parts={md_series_frame_front='md_series_frame_front',schoolbus_body_b=''},partConfigFilename='vehicles/md_series/schoolbus_old.pc'};m.reset();m.fillStruct(o,2);assert(o.vehicleName.value=='Gavril MD-Series','A truck or disabled bus body does not reuse the bus image')
+
  `);
 });
 

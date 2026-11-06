@@ -261,8 +261,9 @@ export class DeckView {
     this.text('sound-duration',durationLabel(this.seekDuration));
     if(!this.seeking){this.ids['sound-seek'].value=this.seekDuration?clamp((media.position||0)/this.seekDuration*100,0,100):0;this.text('sound-elapsed',durationLabel(media.position||0));}
 
-    const key=[media.title,media.artist,media.playing,media.available,media.artwork,media.canNext,media.canToggle,media.canPrevious,demo].join('|');
-    if(key!==this.lastMedia){
+    const key=[media.title,media.artist,media.playing,media.available,media.canNext,media.canToggle,media.canPrevious,demo].join('|');
+    if(key!==this.lastMedia||media.artwork!==this.lastArtwork){
+      this.lastArtwork=media.artwork;
       this.lastMedia=key;
       this.text('sound-title',media.available?media.title||'Untitled track':'Your soundtrack.'); this.text('sound-artist',media.available?media.artist||'Windows media':'Play something in your favorite app.');
       this.text('deck-track',media.available?media.title||'Untitled track':'Your soundtrack.'); this.text('deck-artist',media.available?media.artist||'Windows media':'Play something in your favorite app.');

@@ -79,8 +79,8 @@ function queueSettings(patch) {
 
 function registerHandlers() {
   handle('mobile:status',()=>pairingCodes(mobile.status()));
-  handle('mobile:start',async()=>{try{return await pairingCodes(await mobile.start());}catch{await mobile.stop();return {running:false,links:[],error:'Could not start the phone dashboard. Try again.'};}});
-  handle('mobile:stop',()=>mobile.stop());
+  handle('mobile:start',async()=>{try{let state;try{state=await mobile.start({port:settings.mobilePort});}catch(error){if(error.code!=='EADDRINUSE')throw error;state=await mobile.start({port:0});}if(state.port!==settings.mobilePort||!settings.mobileLanding)await queueSettings({mobilePort:state.port,mobileLanding:true});return await pairingCodes(state);}catch{await mobile.stop();return {running:false,links:[],error:'Could not start the phone dashboard. Try again.'};}});
+  handle('mobile:stop',()=>mobile.pause());
   handle('mobile:instructions',async()=>{await shell.openExternal('https://drivedecks.app/mobile');return {ok:true};});
   handle('release:acknowledge',()=>{fs.writeFileSync(notesSeenFile,JSON.stringify({version:app.getVersion()}));showInstalledNotes=false;return {ok:true};});
   handle('app:bootstrap', () => ({ platform:process.platform,currentRelease,showInstalledNotes,settings, telemetry: telemetry.snapshot(), map: telemetry.mapFeed.snapshot(), media: media.state, animation: animated.state, audio: audio.state, displays: displays(), version: app.getVersion(), updates: updates?.snapshot(), fullscreen: window.isFullScreen() }));
@@ -216,6 +216,7 @@ async function createWindow() {
   telemetry.mapFeed.on('update', patch => send('map:state', patch));
   let mapTick = 0;
   ticker = setInterval(() => { send('telemetry:state', telemetry.snapshot()); syncAudio(); if (++mapTick % 15 === 0) send('map:state', { connected: telemetry.mapFeed.snapshot().connected }); }, 1000 / 30);
+  if(settings.mobileLanding){try{await mobile.start({port:settings.mobilePort,paused:true});}catch{/* The Start button can pick and save another free port. */}}
   await window.loadFile(page);
   if (!smoke) {
     updateTimer=setTimeout(()=>updates.check(),4000);
