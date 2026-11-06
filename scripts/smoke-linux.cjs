@@ -1,10 +1,10 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),dgram=require('node:dgram');
 const {companionV2}=require('../test/fixtures.cjs');
-exports.run=async({app,window,telemetry})=>{const socket=dgram.createSocket('udp4');let timer;const js=s=>window.webContents.executeJavaScript(s),delay=ms=>new Promise(r=>setTimeout(r,ms));const until=async code=>{for(let i=0;i<120;i++){if(await js(code))return;await delay(50);}throw Error('Timed out: '+code);};try{
+exports.run=async({app,window,telemetry})=>{window.show();const socket=dgram.createSocket('udp4');let timer;const js=s=>window.webContents.executeJavaScript(s),delay=ms=>new Promise(r=>setTimeout(r,ms));const until=async code=>{for(let i=0;i<120;i++){if(await js(code))return;await delay(50);}throw Error('Timed out: '+code);};try{
  await until("document.getElementById('app').dataset.ready==='true'");
  assert.equal((await js('window.driveDeck.bootstrap()')).platform,'linux');
  assert.equal(await js("document.querySelectorAll('[data-deck-choice]').length"),14);
- await js("window.driveDeck.updateSettings({deck:'arch',autoDeck:false,demo:false,animatedArtwork:false})");
+ const selection=await js("window.driveDeck.updateSettings({deck:'arch',autoDeck:false,demo:false,animatedArtwork:false})");assert.equal(selection.ok,true);assert.equal(selection.settings.deck,'arch');
  await until("document.getElementById('deck-stage').dataset.deck==='arch'");
  timer=setInterval(()=>socket.send(companionV2({vehicleId:'vivace',name:'Cherrier Vivace',speed:30,rpm:4200}),telemetry.port,'127.0.0.1'),40);
  await until("document.getElementById('arch-speed-value').textContent==='67'&&document.getElementById('arch-rpm-value').textContent==='4200'");
