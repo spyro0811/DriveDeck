@@ -1,6 +1,11 @@
 name: Build Linux release
 on:
   workflow_dispatch:
+    inputs:
+      build_only:
+        description: Build verified packages without creating a separate release
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       build_only:
