@@ -1,7 +1,7 @@
 {
   "name": "drivedeck",
   "productName": "DriveDeck",
-  "version": "0.20.3",
+  "version": "0.20.4",
   "description": "A customizable BeamNG.drive instrument cluster and desktop media dashboard.",
   "private": true,
   "author": "DriveDeck contributors",

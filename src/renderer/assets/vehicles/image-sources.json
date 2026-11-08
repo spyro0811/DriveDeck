@@ -128,5 +128,15 @@
     "file": "Sunburst.png",
     "source": "Hirochi Sunburst.png",
     "sha256": "637a114f0d91201e5a4737682014b7cc6f87f54f26de06a8dea0a0d136758f59"
+  },
+  {
+    "file": "Hopper.png",
+    "source": "Ibishu Hopper.png",
+    "sha256": "6aa58f257037994e40f612b6d66465ddfb857906fa236eb7e76a8c2938e4f2fe"
+  },
+  {
+    "file": "Ardente.png",
+    "source": "Cherrier Ardente.png",
+    "sha256": "2bbf5ceb22e9697586a0f47ef55a81617556e0f4e86316db4dd60f87d840e2ba"
   }
 ]

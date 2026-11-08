@@ -1,13 +1,13 @@
 // User-supplied PNGs are unchanged; viewBox trims transparent padding.
 export const VEHICLE_ASSETS={
   "Ardente": {
-    "width": 740,
-    "height": 783,
+    "width": 920,
+    "height": 743,
     "viewBox": [
-      80,
-      132,
-      583,
-      566
+      147,
+      146,
+      605,
+      433
     ]
   },
   "Bastion": {
@@ -41,13 +41,13 @@ export const VEHICLE_ASSETS={
     ]
   },
   "Hopper": {
-    "width": 1469,
-    "height": 1014,
+    "width": 926,
+    "height": 652,
     "viewBox": [
-      431,
-      280,
-      524,
-      546
+      171,
+      61,
+      543,
+      484
     ]
   },
   "Pidgeon": {

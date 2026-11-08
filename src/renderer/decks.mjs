@@ -1,3 +1,4 @@
+import {plaidMarkup,PlaidView} from './plaid.mjs';
 import {BassPulse} from './audio.mjs';
 import {ROBOBEAT_DECK,robobeatMarkup,UnlockSound,RobobeatView} from './robobeat.mjs';
 import {martinMarkup,MartinView} from './martin.mjs';
@@ -19,6 +20,7 @@ export const DECKS = [
   {id:'martin',name:'Martin',note:'Teal circular instruments. Artwork, navigation or tire pressure at the center.'},
   { id: 'm235', name: 'M235', note: 'Angular instruments, orange illumination, and a central digital speed display.' },
   { id: 'model-s', name: 'Model S', note: 'Minimal instruments. Your BeamNG model, with a dedicated Park view.' },
+  {id:'plaid-track',name:'Plaid Track',note:'Track temperatures, clean instruments and a Plaid launch display.'},
   { id: 'model-three', name: 'Model Three', note: 'A light vehicle panel and live navigation, made for the EDGE.' },
   { id: 'civetta', name: 'Civetta', note: 'Scintilla instruments, synced to your drive mode.' },
   { id: 'homosexual', name: 'Luce', note: 'Three sculpted analog dials. Orange needles and golden markings.' },
@@ -123,6 +125,7 @@ export class DeckView {
     ${homosexualMarkup()}
     ${civettaMarkup()}
     ${teslaMarkup()}
+    ${plaidMarkup()}
     <div id="sound-bottom-controls" class="sound-bottom-controls" role="group" aria-label="Ultra Sound playback controls" hidden><div class="sound-seek-row"><span id="sound-elapsed">0:00</span><input id="sound-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Playback position"><span id="sound-duration">0:00</span></div></div>
     <div class="deck-media" id="deck-media"><div class="deck-song"><div class="deck-art" id="deck-art"><video id="deck-motion" muted loop playsinline disablepictureinpicture hidden></video><img id="deck-art-image" alt="Album artwork" hidden><span>${icon('music')}</span></div><div class="deck-track"><strong id="deck-track">Your soundtrack.</strong><span id="deck-artist">Play something in your favorite app.</span><div class="deck-track-progress"><i id="deck-track-progress"></i></div></div></div><canvas id="deck-levels" class="deck-levels" aria-label="Live six-band Now Playing visualizer, bass to highs" title="System audio · bass to highs" hidden></canvas><div class="deck-transport"><button id="deck-previous" aria-label="Previous track">${icon('previous')}</button><button id="deck-play" class="deck-play" aria-label="Play or pause">${icon('play')}</button><button id="deck-next" aria-label="Next track">${icon('next')}</button></div></div>`;
     this.ids = Object.fromEntries([...root.querySelectorAll('[id]')].map(e=>[e.id,e]));
@@ -132,7 +135,7 @@ export class DeckView {
     this.ids['sound-seek'].onblur=this.ids['sound-seek'].onpointercancel=()=>{this.seeking=false;};
     this.bassPulse=new BassPulse();this.flash=document.createElement("div");this.flash.className="bass-screen-flash";this.flash.setAttribute("aria-hidden","true");root.append(this.flash);
     this.unlockSound=new UnlockSound();this.robobeat=new RobobeatView(this.ids,this.unlockSound);this.martin=new MartinView(this.ids,actions);
-    this.tesla=new TeslaDecks(this.ids,actions);
+    this.tesla=new TeslaDecks(this.ids,actions);this.plaid=new PlaidView(this.ids,actions,new PlanarG());
     this.motionPlayers=[new MotionArtwork(this.ids['sound-motion'],actions.animationFailed),new MotionArtwork(this.ids['deck-motion'],actions.animationFailed)];
     this.palette=DEFAULT_PALETTE;this.paletteSource=null;this.paletteRequest=0;
     this.levels = new AudioCanvas(this.ids['sound-canvas'],6);
@@ -165,9 +168,10 @@ export class DeckView {
     if (deck!==this.deck) {
       this.deck=deck; this.root.dataset.deck=deck;
       if(this.deckBefore==='robobeat'&&deck!=='robobeat')this.unlockSound.stop();this.deckBefore=deck;this.ids['robobeat-deck'].hidden=deck!=='robobeat';this.ids['martin-deck'].hidden=deck!=='martin';this.ids['arch-deck'].hidden=deck!=='arch';this.ids['m235-deck'].hidden=deck!=='m235';
+      this.ids['plaid-track-deck'].hidden=deck!=='plaid-track';
       this.ids['model-s-deck'].hidden=deck!=='model-s';this.ids['model-three-deck'].hidden=deck!=='model-three';
-      this.ids['ultra-deck'].hidden=['martin','robobeat','arch','m235','model-s','model-three','civetta','vivace','iadnuyh','homosexual'].includes(deck); this.ids['iadnuyh-deck'].hidden=deck!=='iadnuyh'; this.ids['homosexual-deck'].hidden=deck!=='homosexual'; this.ids['civetta-deck'].hidden=deck!=='civetta'; this.planarG.reset(); this.ids['vivace-deck'].hidden=deck!=='vivace';
-      this.ids[deck==='martin'?'martin-media-slot':deck==='robobeat'?'robobeat-media-slot':deck==='arch'?'arch-media-slot':deck==='m235'?'m235-media-slot':deck==='model-s'?'model-s-media-slot':deck==='model-three'?'model-three-media-slot':deck==='civetta'?'civetta-media-slot':deck==='homosexual'?'homosexual-media-slot':deck==='iadnuyh'?'iadnuyh-media-slot':deck==='vivace'?'vivace-media-slot':'ultra-media-slot'].append(this.ids['deck-media']);
+      this.ids['ultra-deck'].hidden=['plaid-track','martin','robobeat','arch','m235','model-s','model-three','civetta','vivace','iadnuyh','homosexual'].includes(deck); this.ids['iadnuyh-deck'].hidden=deck!=='iadnuyh'; this.ids['homosexual-deck'].hidden=deck!=='homosexual'; this.ids['civetta-deck'].hidden=deck!=='civetta'; this.planarG.reset(); this.ids['vivace-deck'].hidden=deck!=='vivace';
+      this.ids[deck==='plaid-track'?'plaid-media-slot':deck==='martin'?'martin-media-slot':deck==='robobeat'?'robobeat-media-slot':deck==='arch'?'arch-media-slot':deck==='m235'?'m235-media-slot':deck==='model-s'?'model-s-media-slot':deck==='model-three'?'model-three-media-slot':deck==='civetta'?'civetta-media-slot':deck==='homosexual'?'homosexual-media-slot':deck==='iadnuyh'?'iadnuyh-media-slot':deck==='vivace'?'vivace-media-slot':'ultra-media-slot'].append(this.ids['deck-media']);
     }
     const sound=deck==='sound';this.ids['sound-bottom-controls'].hidden=!sound;
     const transport=this.ids['deck-play'].closest('.deck-transport'),destination=sound?this.ids['sound-bottom-controls']:this.ids['deck-media'];
@@ -177,6 +181,7 @@ export class DeckView {
     this.ids['deck-levels'].hidden=!barVisualizer;
     if(barVisualizer)this.barLevels.draw(audio,now,settings.demo,media.playing);
     if(['model-s','model-three'].includes(deck))this.tesla.update({deck,settings,data,map,rpm,speed,now});
+    if(deck==='plaid-track')this.plaid.update({settings,data,map,rpm,speed,maxRpm,trip,now});
     if(deck==='martin')this.martin.update({settings,data,rpm,speed,maxRpm,map,media,audio,now,trip},this.palette);
     if(deck==='robobeat')this.robobeat.update({settings,data,rpm,speed,maxRpm,audio,media,now});
     if(deck==='arch')updateArch(this.ids,{settings,data,rpm,speed,maxRpm});

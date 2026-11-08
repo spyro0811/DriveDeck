@@ -275,11 +275,15 @@ local function onExtensionLoaded()
 end
 local function onExtensionUnloaded() if udp then udp:close(); udp = nil end end
 local function onClientEndMission() terrainScan=nil; terrainCenter=nil;terrainQueue={};terrainMapId=nil; lastGraph = nil; lastMapId = nil; roadCenter = nil; queue = {}; buildingCenter = nil; buildingNames = nil; buildingQueue = {} end
-M.sendTires = function(objectId, vehicleId, encoded)
+M.sendTires = function(objectId, vehicleId, encoded, encodedBrakes)
   local player=be:getPlayerVehicle(0)
   if not udp or not player or player:getID()~=objectId then return end
   local ok, pressures=pcall(jsonDecode,encoded)
-  if ok and type(pressures)=='table' then udp:sendto('DDT1'..jsonEncode({vehicleId=vehicleId,pressures=pressures}),'127.0.0.1',PORT) end
+  if ok and type(pressures)=='table' then
+    local data={vehicleId=vehicleId,pressures=pressures}
+    if type(encodedBrakes)=='string' then local brakeOk, brakes=pcall(jsonDecode,encodedBrakes); if brakeOk and type(brakes)=='table' then data.brakeTemperatures=brakes end end
+    udp:sendto('DDT1'..jsonEncode(data),'127.0.0.1',PORT)
+  end
 end
 M.onExtensionLoaded = onExtensionLoaded
 M.onExtensionUnloaded = onExtensionUnloaded

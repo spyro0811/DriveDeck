@@ -103,9 +103,10 @@ local function fillStruct(o, dtSim)
   tireTimer = tireTimer + (dtSim or 0)
   if tireTimer >= 0.5 and wheels and wheels.wheels and obj.getGroupPressure and obj.getEnvPressure and jsonEncode then
     tireTimer = 0
-    local pressures = {}
+    local pressures, brakeTemperatures = {}, {}
     for _, wheel in pairs(wheels.wheels) do
       local name = type(wheel.name)=='string' and wheel.name:upper() or ''
+      if (name=='FL' or name=='FR' or name=='RL' or name=='RR') and type(wheel.brakeSurfaceTemperature)=='number' and wheel.brakeSurfaceTemperature==wheel.brakeSurfaceTemperature and wheel.brakeSurfaceTemperature>=-273 and wheel.brakeSurfaceTemperature<=2000 then brakeTemperatures[name]=wheel.brakeSurfaceTemperature end
       local group = wheel.pressureGroup and v and v.data and v.data.pressureGroups and v.data.pressureGroups[wheel.pressureGroup]
       if group and (name=='FL' or name=='FR' or name=='RL' or name=='RR') then
         local ok, absolute = pcall(obj.getGroupPressure, obj, group)
@@ -117,7 +118,7 @@ local function fillStruct(o, dtSim)
       end
     end
     if obj.getID then
-      obj:queueGameEngineLua(string.format('if extensions.drivedeck_map then extensions.drivedeck_map.sendTires(%d,%q,%q) end',obj:getID(),vehicleId,jsonEncode(pressures)))
+      obj:queueGameEngineLua(string.format('if extensions.drivedeck_map then extensions.drivedeck_map.sendTires(%d,%q,%q,%q) end',obj:getID(),vehicleId,jsonEncode(pressures),jsonEncode(brakeTemperatures)))
     end
   end
 end

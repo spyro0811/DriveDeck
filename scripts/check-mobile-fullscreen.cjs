@@ -26,5 +26,5 @@ app.whenReady().then(async()=>{
   fs.writeFileSync(`artifacts/mobile-fullscreen/${w}x${h}-safe-${left}-${right}.png`,(await win.webContents.capturePage()).toPNG());
  }
  await js(`document.getElementById('exit-fullscreen').click()`);assert.equal(await js(`document.body.classList.contains('immersive')`),false);
- await server.stop();console.log('PASS all 13 decks clear left/right cutouts and portrait safe areas, preserve black bars, fill the safe display area; exit restores toolbar');win.destroy();app.quit();
+ await server.stop();console.log('PASS all 14 decks clear left/right cutouts and portrait safe areas, preserve black bars, fill the safe display area; exit restores toolbar');win.destroy();app.quit();
 }).catch(e=>{console.error(e);app.exit(1)});

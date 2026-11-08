@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const THEMES = ['aura', 'etk', 'hirochi', 'ibishu', 'bmw', 'porsche', 'ferrari', 'custom'];
 const WIDGETS = ['media', 'vehicle', 'journey'];
-const DECKS = ['martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
+const DECKS = ['plaid-track','martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
 const DEFAULTS = Object.freeze({
   mobilePort:49259, mobileLanding:false, excludeBeamngAudio:true, visualizerMotion:100, bassFlash:false,
   theme: 'aura', autoTheme: true, units: 'mph', layout: 'touring', deck: 'ultra', autoDeck: false,
@@ -38,6 +38,7 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     canvasEnabled: input.canvasEnabled !== false, appleEnabled: input.appleEnabled !== false,
     deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')||(input.deck==='robobeat'&&input.robobeatUnlocked===true)) ? input.deck : DEFAULTS.deck,
     robobeatUnlocked:input.robobeatUnlocked===true,
+    plaidView:['temp','clean','plaid','sensors'].includes(input.plaidView)?input.plaidView:'temp',
     martinCenter:['artwork','map','map3d','tires'].includes(input.martinCenter)?input.martinCenter:'artwork',
     songVisualizer: input.songVisualizer === true,
     miniPlayerView: 'visualizer',

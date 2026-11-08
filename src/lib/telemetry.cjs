@@ -8,8 +8,8 @@ const text = (packet, offset, size) => packet.subarray(offset, offset + size).to
 
 function decodeTirePacket(packet){
   if(!Buffer.isBuffer(packet)||packet.length>2048||packet.toString('ascii',0,4)!=='DDT1')return null;
-  try{const data=JSON.parse(packet.toString('utf8',4));if(typeof data.vehicleId!=='string'||!/^[a-z0-9_-]{1,48}$/i.test(data.vehicleId)||!data.pressures||typeof data.pressures!=='object'||Array.isArray(data.pressures))return null;
-  const pressures={};for(const key of ['FL','FR','RL','RR']){if(data.pressures[key]===undefined)continue;if(!finite(data.pressures[key],0,3000))return null;pressures[key]=data.pressures[key];}return {vehicleId:data.vehicleId,pressures};}catch{return null;}
+  try{const data=JSON.parse(packet.toString('utf8',4));if(typeof data.vehicleId!=='string'||!/^[a-z0-9_-]{1,48}$/i.test(data.vehicleId)||!data.pressures||typeof data.pressures!=='object'||(Array.isArray(data.pressures)&&data.pressures.length>0))return null;
+  const pressures={};for(const key of ['FL','FR','RL','RR']){if(data.pressures[key]===undefined)continue;if(!finite(data.pressures[key],0,3000))return null;pressures[key]=data.pressures[key];}const brakeTemperatures={};if(data.brakeTemperatures!==undefined){if(!data.brakeTemperatures||typeof data.brakeTemperatures!=='object'||(Array.isArray(data.brakeTemperatures)&&data.brakeTemperatures.length>0))return null;for(const key of ['FL','FR','RL','RR']){if(data.brakeTemperatures[key]===undefined)continue;if(!finite(data.brakeTemperatures[key],-273,2000))return null;brakeTemperatures[key]=data.brakeTemperatures[key];}}return {vehicleId:data.vehicleId,pressures,brakeTemperatures};}catch{return null;}
 }
 function decodePacket(packet) {
   if (!Buffer.isBuffer(packet)) return null;
@@ -143,6 +143,7 @@ class Telemetry extends EventEmitter {
       ambientTemp: vehicleFresh ? this.data.ambientTemp : null,
       odometer: vehicleFresh ? this.data.odometer : null,
       tirePressures:vehicleFresh&&this.tires?.vehicleId===this.data.vehicleId&&now-this.tiresAt<2000?this.tires.pressures:null,
+      brakeTemperatures:vehicleFresh&&this.tires?.vehicleId===this.data.vehicleId&&now-this.tiresAt<2000?this.tires.brakeTemperatures||null:null,
       connected, ageMs, received: this.received, port: this.port,
       error: this.error,
     };
