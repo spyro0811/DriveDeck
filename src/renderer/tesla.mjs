@@ -1,3 +1,6 @@
+import {captureDrivingViews} from './driving-preview.mjs';
+import {TrafficLayout} from './traffic-layout.mjs';
+import {SurroundingsView} from './surroundings.mjs';
 import { vehicleVisual } from './vehicle-identity.mjs';
 import { clearStudioPreview } from './vehicle-matte.mjs';
 import { gearLabel } from './model.mjs';
@@ -9,24 +12,28 @@ const drivingCar=`<div class="tesla-driving-car" id="ms-driving-car" hidden><svg
 function drivingVehicle(id){return drivingCar.replaceAll('ms-',id+'-').replaceAll('rear-body',id+'-rear-body').replaceAll('rear-glass',id+'-rear-glass');}
 function vehicle(id){return `<div class="tesla-car" id="${id}-car"><img id="${id}-image" alt="Current BeamNG vehicle model preview" hidden><div class="tesla-fallback" id="${id}-fallback">${carFallback}</div></div>`;}
 function gears(id){return `<div class="tesla-gears" id="${id}-gears">${['P','R','N','D'].map(g=>`<span data-gear="${g}">${g}</span>`).join('')}<b id="${id}-gear"></b></div>`;}
+const drivingModes=[['absolute','Absolute','Full surroundings plus buildings, trees, poles and hydrants.'],['full','Full','Roads, nearby traffic, lights and sidewalks.'],['road','Performance','Just the road and your car. Fewer scene updates.'],['off','Off','Your car, with the surroundings hidden.']];
+function drivingControls(p){return `<div class="driving-menu"><button id="${p}-performance-open" class="driving-menu-open" aria-haspopup="dialog">Driving view · <span id="${p}-performance-label">Full</span> ▾</button><dialog id="${p}-performance-library" class="driving-library"><header><div><small>DRIVING VIEW</small><h2>Choose your driving view</h2><p>Captures of your current road and car. Absolute fills in as nearby objects are scanned.</p></div><button id="${p}-performance-close" aria-label="Close driving view library">✕</button></header><div class="driving-sliders"><label>Turn camera frame rate <b id="${p}-fps-label">5 FPS</b><input id="${p}-camera-fps" type="range" min="0" max="30" step="1"></label><label>Surroundings render distance <b id="${p}-distance-label">120 m</b><input id="${p}-render-distance" type="range" min="30" max="120" step="5"></label><small>0 FPS turns the camera off. More distance reveals sidewalks farther ahead; higher settings use more resources.</small></div><div class="driving-mode-grid">${drivingModes.map(([id,name,note])=>`<button data-driving-mode="${id}"><img alt="${name} · current driving view capture"><strong>${name}</strong><span>${note}</span></button>`).join('')}</div></dialog></div>`;}
 export function teslaMarkup(){return `
 <section id="model-s-deck" class="model-s-deck tesla-deck" hidden>
- <div class="ms-stage" id="ms-stage"><div class="ms-lanes" aria-hidden="true"><svg viewBox="0 0 800 440" preserveAspectRatio="none"><defs><linearGradient id="ms-road-fade" x2="0" y2="1"><stop stop-color="#63676d" stop-opacity="0"/><stop offset="1" stop-color="#63676d" stop-opacity=".6"/></linearGradient></defs><path d="M348 25 210 440M452 25 590 440" stroke="url(#ms-road-fade)" stroke-width="5" fill="none"/></svg></div>
+ <div class="ms-stage" id="ms-stage"><canvas class="tesla-surroundings" id="ms-surroundings" aria-label="Live nearby vehicles and reported traffic signals" hidden></canvas><div class="ms-lanes" aria-hidden="true"><svg viewBox="0 0 800 440" preserveAspectRatio="none"><defs><linearGradient id="ms-road-fade" x2="0" y2="1"><stop stop-color="#63676d" stop-opacity="0"/><stop offset="1" stop-color="#63676d" stop-opacity=".6"/></linearGradient></defs><path d="M348 25 210 440M452 25 590 440" stroke="url(#ms-road-fade)" stroke-width="5" fill="none"/></svg></div>
  <div class="ms-car-area">${vehicle('ms')}${drivingVehicle('ms')}<div class="tesla-car-label"><strong id="ms-name">Waiting for BeamNG</strong><small id="ms-preview-note"></small></div></div>
  <div class="ms-speed"><span id="ms-mode"></span><strong id="ms-speed">—</strong><small id="ms-unit">MPH</small><div class="ms-rpm"><b id="ms-rpm">—</b><span>×1000 RPM</span></div></div>
  <div class="ms-park-label" id="ms-park-label" hidden>Parked</div><div class="ms-indicators" id="ms-indicators"></div></div>
  <div class="ms-status"><div><span class="tesla-energy"><i id="ms-energy-fill"></i></span><b id="ms-fuel">—</b><span id="ms-temp">—</span></div><div><time id="ms-time"></time>${gears('ms')}</div></div>
- <footer class="tesla-footer"><div id="model-s-media-slot"></div></footer>
+ <footer class="tesla-footer"><span class="mt-dock">${icon('car')}<span>DriveDeck</span></span>${drivingControls('ms')}<div id="model-s-media-slot"></div></footer>
 </section>
 <section id="model-three-deck" class="model-three-deck tesla-deck" hidden>
  <div class="mt-top"><b>MODEL THREE</b><span id="mt-name">Waiting for BeamNG</span><span id="mt-temp">—</span><time id="mt-time"></time></div>
  <div class="mt-main"><section class="mt-vehicle" id="mt-vehicle"><div class="mt-instruments"><div><strong id="mt-speed">—</strong><span id="mt-unit">MPH</span></div><div class="mt-revs"><strong id="mt-rpm">—</strong><span>×1000 RPM</span></div></div>
- <div class="mt-car-area">${vehicle('mt')}${drivingVehicle('mt')}<small id="mt-preview-note"></small></div><div class="mt-vehicle-bottom">${gears('mt')}<span id="mt-fuel">Fuel —</span><span id="mt-state">Waiting for vehicle</span></div></section>
+ <canvas class="tesla-surroundings" id="mt-surroundings" aria-label="Live nearby vehicles and reported traffic signals" hidden></canvas><div class="mt-car-area">${vehicle('mt')}${drivingVehicle('mt')}<small id="mt-preview-note"></small></div><div class="mt-vehicle-bottom">${gears('mt')}<span id="mt-fuel">Fuel —</span><span id="mt-state">Waiting for vehicle</span></div></section>
  <section class="mt-map"><canvas id="mt-map" aria-label="BeamNG live navigation map"></canvas><div class="mt-route"><span>${icon('route')}</span><div><strong id="mt-map-title">Navigation</strong><small id="mt-map-state">Waiting for BeamNG map</small></div></div><div class="mt-map-buttons"><button id="mt-compass" aria-label="Toggle map orientation">N</button><button id="mt-zoom-in" aria-label="Zoom map in">+</button><button id="mt-zoom-out" aria-label="Zoom map out">−</button></div></section></div>
- <footer class="mt-footer"><span class="mt-dock">${icon('car')}<span>DriveDeck</span></span><div id="model-three-media-slot"></div><span class="mt-footer-status" id="mt-mode">BEAMNG.DRIVE</span></footer>
+ <footer class="mt-footer"><span class="mt-dock">${icon('car')}<span>DriveDeck</span></span>${drivingControls('mt')}<div id="model-three-media-slot"></div><span class="mt-footer-status" id="mt-mode">BEAMNG.DRIVE</span></footer>
 </section>`;}
 export class TeslaDecks{
- constructor(ids,actions){this.ids=ids;this.map=new MapCanvas(ids['mt-map']);ids['mt-zoom-in'].onclick=()=>actions.zoom(1.25);ids['mt-zoom-out'].onclick=()=>actions.zoom(.8);ids['mt-compass'].onclick=()=>actions.compass();this.identity=null;this.request=0;this.preview=null;}
+ constructor(ids,actions){this.ids=ids;this.trafficLayout=new TrafficLayout();this.surroundings={ms:new SurroundingsView(ids['ms-surroundings'],{appearance:'dark'}),mt:new SurroundingsView(ids['mt-surroundings'])};this.map=new MapCanvas(ids['mt-map']);ids['mt-zoom-in'].onclick=()=>actions.zoom(1.25);ids['mt-zoom-out'].onclick=()=>actions.zoom(.8);ids['mt-compass'].onclick=()=>actions.compass();this.identity=null;this.request=0;this.preview=null;
+ for(const p of ['ms','mt']){for(const [key,suffix,label]of [['cameraFps','camera-fps','fps-label'],['renderDistance','render-distance','distance-label']]){const input=ids[p+'-'+suffix];input.oninput=()=>{ids[p+'-'+label].textContent=input.value+(key==='cameraFps'?' FPS':' m');};input.onchange=()=>actions.drivingOptions?.({[key]:Number(input.value)});}const dialog=ids[p+'-performance-library'];ids[p+'-performance-open'].onclick=()=>{dialog.showModal();void captureDrivingViews(p,ids,this.previewState,drivingModes).catch(()=>{});};ids[p+'-performance-close'].onclick=()=>dialog.close();dialog.onclick=async e=>{const choice=e.target.closest('[data-driving-mode]');if(choice){const ok=await actions.trafficView?.(choice.dataset.drivingMode);if(ok!==false)dialog.close();}else if(e.target===dialog)dialog.close();};}}
+
  text(id,value){const e=this.ids[id];if(e.textContent!==String(value))e.textContent=value;}
  async identityChanged(id){this.lastLookup=Date.now();const request=++this.request;this.preview=null;this.showImage(null);if(!id)return;try{const preview=await window.driveDeck?.vehiclePreview?.(id);if(request!==this.request)return;this.preview=preview?.id===id?preview:null;this.showImage(this.preview?.image);}catch{}}
  async showImage(src){
@@ -37,18 +44,22 @@ export class TeslaDecks{
  }
 
  update({deck,settings,data,map,rpm,speed,now}){
+  this.previewState={data,map,now};
+  for(const p of ['ms','mt']){for(const [key,suffix,label,unit,fallback]of [['cameraFps','camera-fps','fps-label',' FPS',5],['renderDistance','render-distance','distance-label',' m',120]]){const input=this.ids[p+'-'+suffix];if(document.activeElement!==input){input.value=settings[key]??fallback;this.text(p+'-'+label,(settings[key]??fallback)+unit);}}this.text(p+'-performance-label',(drivingModes.find(m=>m[0]===(settings.trafficView||'full'))||drivingModes[1])[1]);this.ids[p+'-performance-library'].querySelectorAll('[data-driving-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.drivingMode===(settings.trafficView||'full'))));}
   const id=data.connected&&!settings.demo?data.vehicleId:null,visual=vehicleVisual(data),identity=id?`${id}:${visual.key}`:null;if(identity!==this.identity||(id&&!this.preview?.image&&Date.now()-(this.lastLookup||0)>10000)){this.identity=identity;this.identityChanged(id);}
   const rear=!!id&&!!visual.asset;
   for(const prefix of ['ms','mt']){this.ids[prefix+'-rear-asset'].toggleAttribute('hidden',!rear);this.ids[prefix+'-rear-fallback'].toggleAttribute('hidden',rear);if(rear&&this.rearKey!==visual.key){this.ids[prefix+'-rear-asset'].setAttribute('viewBox',visual.viewBox.join(' '));this.ids[prefix+'-rear-image'].setAttribute('href',new URL(`./assets/vehicles/${visual.asset}.png`,import.meta.url).href);this.ids[prefix+'-rear-image'].setAttribute('width',visual.width);this.ids[prefix+'-rear-image'].setAttribute('height',visual.height);}}
   this.rearKey=visual.key;
   const p=deck==='model-s'?'ms':'mt',park=isParked(data),gear=data.connected?(data.selectedGear||gearLabel(data.gear)):'—';
+  const surround=this.trafficLayout.update(data,park,!settings.demo)||(!park&&settings.trafficView==='off');const area=this.ids[p==='ms'?'ms-stage':'mt-vehicle'];area.dataset.surroundings=String(surround);this.ids[p+'-surroundings'].hidden=!surround;if(surround)this.surroundings[p].draw(data,now,{...map,renderDistance:settings.renderDistance??120},settings.trafficView);
   const name=data.connected?(visual.label||this.preview?.name||(!/^table:/.test(data.vehicleName||'')&&data.vehicleName)||data.vehicleId||'BeamNG vehicle'):'Waiting for BeamNG';
   this.text(p+'-name',name);this.text(p+'-speed',data.connected?Math.round(speed):'—');this.text(p+'-rpm',data.connected?(rpm/1000).toFixed(1):'—');this.text(p+'-unit',settings.units==='kmh'?'KM/H':'MPH');
   this.text(p+'-temp',data.connected&&Number.isFinite(data.ambientTemp)?`${Math.round(settings.units==='mph'?data.ambientTemp*9/5+32:data.ambientTemp)}°${settings.units==='mph'?'F':'C'}`:'—');
   this.text(p+'-time',new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}));
   this.ids[p+'-gears'].querySelectorAll('[data-gear]').forEach(e=>e.classList.toggle('selected',e.dataset.gear===gear));this.text(p+'-gear',['P','R','N','D'].includes(gear)?'':gear);
-  for(const prefix of ['ms','mt']){this.ids[prefix+'-driving-car'].hidden=park||!data.connected;this.ids[prefix+'-car'].hidden=!park&&data.connected;}
-  this.text(p+'-preview-note',!data.connected?'Connect the BeamNG companion':!id?'Enable Other UDP protocols in BeamNG, then reload the vehicle':'');
+  for(const prefix of ['ms','mt']){this.ids[prefix+'-driving-car'].hidden=park||(!data.connected&&!surround);this.ids[prefix+'-car'].hidden=!park&&(data.connected||surround);}
+  this.text(p+'-preview-note',!data.connected?'Connect the BeamNG companion':!id?'Enable Other UDP protocols in BeamNG, then reload the vehicle':!park?(surround?(data.surroundings?(data.surroundings.lanes?'Live traffic · road-based lanes':'Live traffic · lane data unavailable'):'Traffic signal interrupted · reconnecting'):'Update companion for nearby vehicles'):'');
+  if(!park&&['road','off'].includes(settings.trafficView))this.text(p+'-preview-note',settings.trafficView==='off'?'Car only':'Performance · road only');
   const fuel=data.connected&&Number.isFinite(data.fuel)?`${Math.round(data.fuel*100)}%`:'—';
   this.text(p+'-fuel',p==='ms'?`${fuel} fuel`:`Fuel ${fuel}`);
   const mode=data.connected?(data.driveModeLabel||data.driveModeKey||''):'';this.text(p+'-mode',mode);
@@ -56,3 +67,6 @@ export class TeslaDecks{
   else{this.ids['mt-vehicle']?.setAttribute('data-park',String(park));this.text('mt-state',!data.connected?'No vehicle signal':park?'Parked':data.lights?.handbrake?'Parking brake':'Driving');const ready=!!map?.roads?.length&&!!map?.position;this.text('mt-map-title',map?.levelName||map?.mapId||'Navigation');this.text('mt-map-state',!ready?'Waiting for BeamNG map':!map.connected?'Map signal lost':map.route?.length>1?'Following your in-game route':'Live roads · vehicle position');this.text('mt-compass',settings.mapHeadingUp?'↑':'N');this.map.draw(map,{...settings,atlasView:'2d',mapAppearance:'light',mapTerrain:false},now);}
  }
 }
+
+
+

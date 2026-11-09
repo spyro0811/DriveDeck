@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" IgnorableNamespaces="uap uap3 rescap">
+ <Identity Name="DriveDeck.NotificationBridge.Preview" Publisher="CN=DriveDeck Preview, OID.2.25.311729368913984317654407730594956997722=1" Version="0.1.2.0" ProcessorArchitecture="x64"/>
+ <Properties><DisplayName>DriveDeck notifications</DisplayName><PublisherDisplayName>DriveDeck</PublisherDisplayName><Logo>Assets\StoreLogo.png</Logo></Properties>
+ <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0"/></Dependencies>
+ <Resources><Resource Language="en-us"/></Resources>
+ <Applications><Application Id="Bridge" Executable="DriveDeck.NotificationBridge.exe" EntryPoint="Windows.FullTrustApplication"><uap:VisualElements DisplayName="DriveDeck notifications" Description="Display Windows and Phone Link notifications inside DriveDeck" BackgroundColor="#111820" Square150x150Logo="Assets\Logo150.png" Square44x44Logo="Assets\Logo44.png"/></Application></Applications>
+ <Capabilities><uap3:Capability Name="userNotificationListener"/><rescap:Capability Name="runFullTrust"/></Capabilities>
+</Package>
+

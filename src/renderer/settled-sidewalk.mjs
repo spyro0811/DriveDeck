@@ -1,0 +1,11 @@
+import {worldPoint,viewPoint,mapPose}from'./static-scene.mjs';
+// Keep settled ten-metre sections fixed in the world. New scans may extend the
+// model, but cannot continuously reshape an already observed street section.
+function clip(poly,axis,bound,greater){const out=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=(a[axis]-bound)*(greater?1:-1),db=(b[axis]-bound)*(greater?1:-1);if(da>=0)out.push(a);if((da>=0)!==(db>=0)){const t=da/(da-db);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}return out;}
+const area=p=>p.reduce((s,a,i)=>{const b=p[(i+1)%p.length];return s+a[0]*b[1]-a[1]*b[0];},0)/2;
+export function settleSidewalk(cache,candidates,map,now){const pose=mapPose(map);if(!pose)return candidates;cache.worldSections??=new Map();
+ const next=new Map();for(const loop of candidates){const world=loop.map(p=>worldPoint(p,pose));const loX=Math.floor(Math.min(...world.map(p=>p[0]))/10),hiX=Math.floor(Math.max(...world.map(p=>p[0]))/10),loY=Math.floor(Math.min(...world.map(p=>p[1]))/10),hiY=Math.floor(Math.max(...world.map(p=>p[1]))/10);for(let x=loX;x<=hiX;x++)for(let y=loY;y<=hiY;y++){let p=clip(world,0,x*10,true);if(p.length)p=clip(p,0,(x+1)*10,false);if(p.length)p=clip(p,1,y*10,true);if(p.length)p=clip(p,1,(y+1)*10,false);if(p.length>=3&&Math.abs(area(p))>.02){const key=x+':'+y;const entry=next.get(key)||{x,y,loops:[],size:0};entry.loops.push(p);entry.size+=Math.abs(area(p));next.set(key,entry);}}}
+ for(const[key,entry]of next){const old=cache.worldSections.get(key);if(!old||now-old.first<1200&&entry.size>old.size+.05){cache.worldSections.set(key,{...entry,first:old?.first??now});cache.worldRevision=(cache.worldRevision||0)+1;}}
+ for(const[key,entry]of cache.worldSections)if(Math.hypot((entry.x+.5)*10-pose.x,(entry.y+.5)*10-pose.y)>(map.renderDistance??120)+40){cache.worldSections.delete(key);cache.worldRevision=(cache.worldRevision||0)+1;}
+ const last=cache.projectedPose;if(last&&last.x===pose.x&&last.y===pose.y&&last.heading===pose.heading&&cache.projectedRevision===cache.worldRevision)return cache.projectedLoops;cache.projectedPose=pose;cache.projectedRevision=cache.worldRevision;return cache.projectedLoops=[...cache.worldSections.values()].flatMap(e=>e.loops.map(poly=>poly.map(p=>viewPoint(p,pose))));
+}

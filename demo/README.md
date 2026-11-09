@@ -53,5 +53,3 @@ The provided MP3, album cover, and matching BeamNG Ardente preview are included 
 - In another terminal: `node_modules/.bin/electron scripts/check-demo.cjs` (on Windows, `electron.cmd`).
 
 The browser QA harness uses its own window/profile and mutes audio output. It checks real playback, nonzero frequency analysis, all deck selections, PRND/animation, drive modes, Apple explanation, and actual animated-cover playback. Screenshots and its report go to `artifacts/embed/`.
-
-The demo recording is excluded from the source repository. Supply your own licensed recording at demo/assets/flashing-lights.mp3 before building the demo.

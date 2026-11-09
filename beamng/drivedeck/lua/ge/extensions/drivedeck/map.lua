@@ -3,6 +3,8 @@
 -- Read-only: no vehicle control, teleporting, or navigation changes.
 local M = {}
 local udp = nil
+local sceneMode,sceneTimer='off',1
+local sceneRange=120
 local PORT = 4444 -- Match drivedeck_cluster_v2.lua and the desktop app.
 local poseTimer, routeTimer, roadTimer = 0, 0, 10
 local lastGraph, lastMapId, roads, queue = nil, nil, {}, {}
@@ -168,6 +170,136 @@ local function mapIdentity()
   return id, id:gsub('_', ' ')
 end
 
+local stopWidths=setmetatable({}, {__mode='k'})
+local function nearbyLanes(position,direction,relative)
+  if not map or not map.findBestRoad or not map.getMap then return nil end
+  local graph=map.getMap();local nodes=graph and graph.nodes
+  local a,b=map.findBestRoad(position,direction);if not nodes or not nodes[a] or not nodes[b] then return nil end
+  local pa,pb=nodes[a].pos,nodes[b].pos
+  if (pb.x-pa.x)*direction.x+(pb.y-pa.y)*direction.y<0 then a,b=b,a;pa,pb=pb,pa end
+  local dx,dy=pb.x-pa.x,pb.y-pa.y;local len=math.sqrt(dx*dx+dy*dy);if len<0.1 then return nil end
+  local t=math.max(0,math.min(1,((position.x-pa.x)*dx+(position.y-pa.y)*dy)/(len*len)))
+  local cx,cy=pa.x+t*dx,pa.y+t*dy;local width=math.min(60,math.max(2,(nodes[a].radius or 3)+(nodes[b].radius or 3)))
+  if (cx-position.x)^2+(cy-position.y)^2>(width*.5+3)^2 then return nil end
+  local link=nodes[a].links[b] or nodes[b].links[a];if not link or link.hiddenInNavi or (link.drivability or 1)<.2 then return nil end
+  -- Graph lane strings may themselves be inferred from pavement width,
+  -- including parking/shoulders. Only trust explicit DecalRoad lane fields.
+  local count,explicit=link.oneWay and math.max(1,math.min(4,math.floor((width-2)/3.6+.5))) or 2,false
+  if scenetree and scenetree.findObject then
+    for _,nodeId in ipairs({a,b}) do
+      local name=tostring(nodeId)
+      for cut=0,8 do
+        local candidate=cut==0 and name or name:sub(1,#name-cut)
+        local object=scenetree.findObject(candidate)
+        if object and object.getClassName and object:getClassName()=='DecalRoad' and object.autoLanes==false then
+          local total=(tonumber(object.lanesLeft) or 0)+(tonumber(object.lanesRight) or 0)
+          if total>0 and total<=12 then count,explicit=total,true;break end
+        end
+        if cut>0 and not name:sub(#name-cut+1):match('^[%d_]+$') then break end
+      end
+      if explicit then break end
+    end
+  end
+  local points,visited={},{};local distance=0;local first=true
+  for segment=1,12 do
+    pa,pb=nodes[a].pos,nodes[b].pos;dx,dy=pb.x-pa.x,pb.y-pa.y;len=math.sqrt(dx*dx+dy*dy);if len<.1 then break end
+    local start=first and math.max(0,t-5/len) or 0;first=false
+    local steps=math.max(1,math.ceil(len*(1-start)/4))
+    for i=0,steps do
+      local u=start+(1-start)*i/steps;local travelled=distance+(u-start)*len
+      if travelled>125 or #points>=96 then break end
+      local x,y=relative({x=pa.x+u*dx,y=pa.y+u*dy});if math.abs(x)<=145 and math.abs(y)<=145 then points[#points+1]={x=x,y=y,width=math.min(count*3.7,math.max(2,2*((nodes[a].radius or 3)*(1-u)+(nodes[b].radius or 3)*u))),roadWidth=math.min(60,math.max(2,2*((nodes[a].radius or 3)*(1-u)+(nodes[b].radius or 3)*u)))} end
+    end
+    distance=distance+len*(1-start);if distance>125 then break end
+    visited[a]=true;local nextId,best=nil,-.3
+    for id,edge in pairs(nodes[b].links or {}) do local node=nodes[id];if node and not visited[id] and id~=a and not edge.hiddenInNavi and (edge.drivability or 1)>=.2 then local ex,ey=node.pos.x-pb.x,node.pos.y-pb.y;local el=math.sqrt(ex*ex+ey*ey);local score=el>.1 and (ex*dx+ey*dy)/(el*len) or -1;if score>best then nextId,best=id,score end end end
+    if not nextId then break end;a,b=b,nextId
+  end
+  return #points>1 and {points=points,count=count,estimated=not explicit} or nil
+end
+
+local vehicleKinds={}
+local function vehicleKind(other)
+ local key=tostring(other:getJBeamFilename())..':'..tostring(other.partConfig or '')
+ if vehicleKinds[key] then return vehicleKinds[key] end
+  local kind='unknown'
+ if other:getJBeamFilename()=='simple_traffic' then
+  local config=tostring(other.partConfig or ''):lower()
+  if core_vehicles and core_vehicles.getVehicleDetails then local details=core_vehicles.getVehicleDetails(other:getID());config=config..' '..tostring(details and details.current and details.current.config_key or '') end
+  if config:find('roamer',1,true) then kind='suv' elseif config:find('pickup',1,true) then kind='pickup' elseif config:find('van',1,true) or config:find('lansdale',1,true) then kind='van' elseif config:find('bus',1,true) then kind='bus' elseif config~='' and not config:find('table:',1,true) then kind='sedan' end
+  if kind~='unknown' then vehicleKinds[key]=kind;return kind end
+ end
+ if core_vehicles and core_vehicles.getVehicleDetails then
+  local d=core_vehicles.getVehicleDetails(other:getID());local c=d and d.configs or {};local model=d and d.model or {};local body=tostring(c['Body Style'] or model['Body Style'] or ''):lower();local config=(tostring(c.Name or '')..' '..tostring(d and d.current and d.current.config_key or '')..' '..tostring(other.partConfig or '')):lower()
+  if body:find('pickup',1,true) then kind='pickup' elseif body:find('suv',1,true) then kind='suv' elseif body:find('van',1,true) then kind='van' elseif body:find('bus',1,true) then kind='bus' elseif body:find('truck',1,true) then kind=(config:find('box',1,true) and 'box-truck' or config:find('tractor',1,true) or config:find('semi',1,true)) and (config:find('box',1,true) and 'box-truck' or 'semi') or 'truck' elseif body:find('sedan',1,true) or body:find('coupe',1,true) or body:find('hatchback',1,true) or body:find('wagon',1,true) then kind='sedan' end
+ end
+ vehicleKinds[key]=kind;return kind
+end
+local barrierBatch,barrierTick=os.time()*1000,0
+local barrierQueue,barrierQueueIndex,barrierLevel={},1,nil
+local function sendSurroundings(player,position,direction)
+  local length=math.sqrt(direction.x*direction.x+direction.y*direction.y);if length<0.01 then return end
+  local fx,fy=direction.x/length,direction.y/length
+  local function relative(pos) local dx,dy=pos.x-position.x,pos.y-position.y;return dx*fy-dy*fx,dx*fx+dy*fy end
+  if sceneMode=='road' or sceneMode=='off' then
+    barrierQueue={};barrierQueueIndex=1
+    local ok,lanes=false,nil;if sceneMode=='road' then ok,lanes=pcall(nearbyLanes,position,direction,relative)end
+    udp:sendto('DDS1'..jsonEncode({vehicleId=player:getJBeamFilename(),vehicles={},signals={},signs={},roadside={},pavement={},lanes=ok and lanes or nil}),'127.0.0.1',PORT);return
+  end
+  local vehicles,signals,signs={},{},{}
+  for _,other in ipairs(getAllVehiclesByType()) do
+    pcall(function()
+    if other:getID()~=player:getID() then
+      local pos=other:getPosition();local x,y=relative(pos)
+      if x*x+y*y<120*120 and math.abs(pos.z-position.z)<6 then local d=other:getDirectionVector();local typeOk,body=pcall(vehicleKind,other);local angle=math.deg(math.atan2(d.x,d.y)-math.atan2(fx,fy));vehicles[#vehicles+1]={id=other:getID(),x=x,y=y,heading=angle,body=typeOk and body or 'unknown'} end
+    end
+    end)
+  end
+  table.sort(vehicles,function(a,b)return a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y end);while #vehicles>32 do table.remove(vehicles) end
+  if core_trafficSignals and core_trafficSignals.getSignals then
+    for _,signal in pairs(core_trafficSignals.getSignals()) do pcall(function()
+      if signal.pos and signal.active and signal.getState and signal.dir then
+        local x,y=relative(signal.pos)
+        local dl=math.sqrt(signal.dir.x^2+signal.dir.y^2);local stateName,state=signal:getState();local color=nil;if state and state.lights and #state.lights>=3 then for _,value in ipairs(state.lights) do if value=='red' or value=='amber' or value=='green' then color=value;break end end end
+        if state and state.lights and #state.lights==1 and (stateName=='basicStop' or state.action=='briefStop' or state.action=='stop') and y>-5 and y<75 and dl>.01 and (signal.dir.x*fx+signal.dir.y*fy)/dl>.5 then
+          local objects=signal.linkedObjects or {};if #objects==0 and signal.getSignalObjects then objects=signal:getSignalObjects() or {} end
+          for _,id in ipairs(objects) do pcall(function()local object=scenetree.findObjectById(id);if object then local sx,sy=relative(object:getPosition());if math.abs(sx)<30 and sy>-5 and sy<90 then signs[#signs+1]={x=sx,y=sy,kind='stop',height=2.2} end end end) end
+          -- Some built-in stop controllers have no linked mesh. Keep the confirmed
+          -- sign at the approach's roadside rather than silently dropping it.
+          if #objects==0 then
+            local width=stopWidths[signal] or 3.5;local graph=map and map.getMap and map.getMap();local nearest=math.huge
+            if not stopWidths[signal] then for _,node in pairs(graph and graph.nodes or {}) do if node.pos then local distance=(node.pos.x-signal.pos.x)^2+(node.pos.y-signal.pos.y)^2;if distance<nearest then nearest=distance;width=math.max(2.5,math.min(7,node.radius or 3.5))end end end;stopWidths[signal]=width end
+            local sx,sy=relative({x=signal.pos.x+signal.dir.y/dl*width,y=signal.pos.y-signal.dir.x/dl*width})
+            if math.abs(sx)<30 then signs[#signs+1]={x=sx,y=sy,kind='stop',height=2.2}end
+          end
+        end
+      end
+    end) end
+  end
+  local signalOk,physicalSignals=pcall(function()return require('ge/extensions/drivedeck/signals').sample(position,fx,fy)end)
+  if signalOk then signals=physicalSignals end
+  local extraOk,extra=pcall(function()return require('ge/extensions/drivedeck/signs').sample(position,fx,fy)end);if extraOk then for _,sign in ipairs(extra)do local duplicate=false;for _,old in ipairs(signs)do if old.kind==sign.kind and(old.x-sign.x)^2+(old.y-sign.y)^2<1 then duplicate=true;break end end;if not duplicate then signs[#signs+1]=sign end end end
+  local level=getMissionFilename and getMissionFilename()or'';if level~=barrierLevel then barrierLevel=level;barrierQueue={};barrierQueueIndex=1 end
+  barrierTick=barrierTick+1
+  local meshOk,barrierFaces,barrierReady=pcall(function()return require('ge/extensions/drivedeck/barrier_mesh').sample(position,fx,fy,sceneRange,#barrierQueue==0 and barrierTick%3==1)end)
+  table.sort(signs,function(a,b)return a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y end);while #signs>40 do table.remove(signs)end
+  local laneOk,lanes=pcall(nearbyLanes,position,direction,relative)
+  local roadsideOk,roadside=pcall(function()return require('ge/extensions/drivedeck/roadside').sample(position,fx,fy)end)
+  local highwayOk,highway=pcall(function()return require('ge/extensions/drivedeck/highway').sample(position,fx,fy,laneOk and lanes or nil)end)
+  local pavementOk,pavement=pcall(function()return require('ge/extensions/drivedeck/pavement').sample(position,fx,fy)end)
+  local environment={};if sceneMode=='absolute' then local ok,result=pcall(function()return require('ge/extensions/drivedeck/environment').sample(position,fx,fy)end);if ok then environment=result end end
+  if meshOk and barrierReady~=false and #barrierQueue==0 then
+    barrierBatch=barrierBatch+1;local total=math.max(1,math.ceil(#barrierFaces/256));local origin={x=position.x,y=position.y,heading=math.deg(math.atan2(fx,fy))}
+    for part=0,total-1 do local chunk={};for i=part*256+1,math.min((part+1)*256,#barrierFaces)do chunk[#chunk+1]=barrierFaces[i]end
+      barrierQueue[#barrierQueue+1]={vehicleId=player:getJBeamFilename(),origin=origin,batch=barrierBatch,part=part,total=total,barrierFaces=chunk}
+    end
+  end
+  -- Spread a dense mesh over frames instead of flooding the UDP receive buffer.
+  for n=1,2 do local chunk=barrierQueue[barrierQueueIndex];if not chunk then break end;udp:sendto('DDB1'..jsonEncode(chunk),'127.0.0.1',PORT);barrierQueueIndex=barrierQueueIndex+1 end
+  if barrierQueueIndex>#barrierQueue then barrierQueue={};barrierQueueIndex=1 end
+  udp:sendto('DDS1'..jsonEncode({origin={x=position.x,y=position.y,heading=math.deg(math.atan2(fx,fy))},vehicleId=player:getJBeamFilename(),vehicles=vehicles,signals=signals,signs=signs,environment=environment,highway=highwayOk and highway or nil,lanes=laneOk and lanes or nil,roadside=roadsideOk and roadside or nil,pavement=pavementOk and pavement or nil}),'127.0.0.1',PORT)
+end
+
 local function buildRoads(graph, position, mapId, levelName)
   -- Keep a complete spatial region, never the first N pairs() entries.
   -- Large graphs reduce coverage as a whole instead of punching random holes.
@@ -224,6 +356,9 @@ local function onUpdate(dtReal, dtSim, dtRaw)
   local position = vehicle:getPosition()
   local mapId, levelName = mapIdentity()
   stepTerrain(position,mapId,dt)
+  sceneTimer=sceneTimer+dt;if sceneTimer>=.2 then sceneTimer=0;sceneMode='off';local ok,c=pcall(function()return jsonReadFile('/drivedeck-camera-config.json')end);local now=os.time();if ok and type(c)=='table' and (c.deck=='model-s' or c.deck=='model-three') and type(c.expiresAt)=='number' and c.expiresAt>now and c.expiresAt<=now+4 then sceneRange=math.max(30,math.min(120,tonumber(c.renderDistance) or 120));sceneMode=(c.sceneMode=='absolute' or c.sceneMode=='road' or c.sceneMode=='off') and c.sceneMode or 'full' end end
+  if sceneMode=='absolute' then pcall(function()require('ge/extensions/drivedeck/environment').step(position,dt)end)end
+  if sceneMode=='full' or sceneMode=='absolute' then pcall(function()require('ge/extensions/drivedeck/pavement').step(position,vehicle:getDirectionVector(),sceneRange)end)end
   -- Repeat complete batches so a restarted dashboard recovers without a game reload.
   if #terrainQueue>0 then
     if terrainQueueIndex<=#terrainQueue then send(terrainQueue[terrainQueueIndex]);terrainQueueIndex=terrainQueueIndex+1
@@ -233,6 +368,7 @@ local function onUpdate(dtReal, dtSim, dtRaw)
     poseTimer = 0
     local direction = vehicle:getDirectionVector()
     send({kind = 'pose', mapId = mapId, levelName = levelName, position = {position.x, position.y}, heading = math.deg(math.atan2(direction.x, direction.y))})
+    pcall(sendSurroundings,vehicle,position,direction)
   end
   local graph = map and map.getMap and map.getMap()
   local moved = not roadCenter or math.abs(position.x - roadCenter.x) > 600 or math.abs(position.y - roadCenter.y) > 600
@@ -275,7 +411,7 @@ local function onExtensionLoaded()
 end
 local function onExtensionUnloaded() if udp then udp:close(); udp = nil end end
 local function onClientEndMission() terrainScan=nil; terrainCenter=nil;terrainQueue={};terrainMapId=nil; lastGraph = nil; lastMapId = nil; roadCenter = nil; queue = {}; buildingCenter = nil; buildingNames = nil; buildingQueue = {} end
-M.sendTires = function(objectId, vehicleId, encoded, encodedBrakes)
+M.sendTires = function(objectId, vehicleId, encoded, encodedBrakes, encodedDamage)
   local player=be:getPlayerVehicle(0)
   if not udp or not player or player:getID()~=objectId then return end
   local ok, pressures=pcall(jsonDecode,encoded)
@@ -283,6 +419,7 @@ M.sendTires = function(objectId, vehicleId, encoded, encodedBrakes)
     local data={vehicleId=vehicleId,pressures=pressures}
     if type(encodedBrakes)=='string' then local brakeOk, brakes=pcall(jsonDecode,encodedBrakes); if brakeOk and type(brakes)=='table' then data.brakeTemperatures=brakes end end
     udp:sendto('DDT1'..jsonEncode(data),'127.0.0.1',PORT)
+    if type(encodedDamage)=='string' then local damageOk,damage=pcall(jsonDecode,encodedDamage);if damageOk and type(damage)=='table' then udp:sendto('DDV1'..jsonEncode({vehicleId=vehicleId,components=damage}),'127.0.0.1',PORT) end end
   end
 end
 M.onExtensionLoaded = onExtensionLoaded
@@ -290,3 +427,13 @@ M.onExtensionUnloaded = onExtensionUnloaded
 M.onUpdate = onUpdate
 M.onClientEndMission = onClientEndMission
 return M
+
+
+
+
+
+
+
+
+
+

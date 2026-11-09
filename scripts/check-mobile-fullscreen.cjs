@@ -22,9 +22,12 @@ app.whenReady().then(async()=>{
    assert.ok(Math.abs(box.vx)<1&&Math.abs(box.vw-w)<1,'Backdrop fills width without black side bars');
    if(w>=h)assert.ok(Math.abs(box.x-box.ax)<1&&Math.abs(box.y-box.ay)<1&&Math.abs(box.w-box.aw)<1&&Math.abs(box.h-box.ah)<1,'Deck fills safe landscape area');
   }
+  await js(`document.querySelector('#cards [data-deck=plaid-track]').click()`);await delay(100);
+  for(const mode of ['stability','plaid-stability']){await js(`document.querySelector('[data-plaid-view="${mode}"]').click()`);await delay(100);const panel=await js(`(()=>{const r=document.getElementById('pt-stability').getBoundingClientRect(),f=document.querySelector('#pt-stability>footer').getBoundingClientRect(),stage=document.getElementById('stage').getBoundingClientRect();return {hidden:document.getElementById('pt-stability').hidden,bottom:f.bottom,stageBottom:stage.bottom,left:r.left,right:r.right,stageLeft:stage.left,stageRight:stage.right}})()`);assert.equal(panel.hidden,false);assert.ok(panel.bottom<=panel.stageBottom+1&&panel.left>=panel.stageLeft&&panel.right<=panel.stageRight,JSON.stringify({w,h,mode,panel}));}
   await js(`document.querySelector('#cards [data-deck=martin]').click()`);await delay(200);
   fs.writeFileSync(`artifacts/mobile-fullscreen/${w}x${h}-safe-${left}-${right}.png`,(await win.webContents.capturePage()).toPNG());
  }
  await js(`document.getElementById('exit-fullscreen').click()`);assert.equal(await js(`document.body.classList.contains('immersive')`),false);
  await server.stop();console.log('PASS all 14 decks clear left/right cutouts and portrait safe areas, preserve black bars, fill the safe display area; exit restores toolbar');win.destroy();app.quit();
 }).catch(e=>{console.error(e);app.exit(1)});
+

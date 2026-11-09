@@ -6,7 +6,7 @@ export function previewApi() {
     alwaysOnTop: false, demo: true, widgets: ['media', 'vehicle', 'journey'], displayId: null,
     brandMappings: { etk: 'etk', hirochi: 'hirochi', ibishu: 'ibishu', bmw: 'bmw', porsche: 'porsche', ferrari: 'ferrari' },
     animatedArtwork:false,animationOrder:['canvas','apple'],canvasEnabled:true,appleEnabled:true,
-    excludeBeamngAudio:true,visualizerMotion:100,bassFlash:false,miniPlayerView:'visualizer', songVisualizer: false, audioView: 'artwork', deck: 'ultra', autoDeck: false, demoDriveMode: 'comfort', civettaPage:'auto', mapZoom: 1, mapAppearance: 'dark', atlasView:'2d', mapTerrain:true, mapHeadingUp: true,
+    excludeBeamngAudio:true,trafficView:'full',visualizerMotion:100,bassFlash:false,miniPlayerView:'visualizer', songVisualizer: false, audioView: 'artwork', deck: 'ultra', autoDeck: false, demoDriveMode: 'comfort', civettaPage:'auto', mapZoom: 1, mapAppearance: 'dark', atlasView:'2d', mapTerrain:true, mapHeadingUp: true,
   };
   let settings = { ...defaults };
   try { settings = { ...defaults, ...JSON.parse(localStorage.getItem('drivedeck-preview') || '{}') }; } catch {}

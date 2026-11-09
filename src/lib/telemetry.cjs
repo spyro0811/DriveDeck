@@ -1,6 +1,8 @@
+const {BarrierFeed}=require('./barrier-feed.cjs');
 const dgram = require('node:dgram');
 const { EventEmitter } = require('node:events');
 const { MapFeed } = require('./map-feed.cjs');
+const {decodeSensors}=require('./vehicle-sensors.cjs');
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const finite = (n, min, max) => Number.isFinite(n) && n >= min && n <= max;
@@ -79,6 +81,7 @@ class Telemetry extends EventEmitter {
     this.error = null;
     this.data = {};
     this.tires=null;this.tiresAt=0;
+    this.damageSensors=null;this.surroundings=null;this.barriers=null;this.barrierFeed=new BarrierFeed();
     this.vehicleAt = 0;
     this.mapFeed = new MapFeed();
   }
@@ -109,12 +112,14 @@ class Telemetry extends EventEmitter {
     this.received = 0;
     this.data = {};
     this.tires=null;this.tiresAt=0;
+    this.damageSensors=null;this.surroundings=null;this.barriers=null;this.barrierFeed=new BarrierFeed();
     this.error = null;
     this.mapFeed.clear();
     if (previous) previous.close();
   }
 
   accept(packet, now = Date.now()) {
+    if(Buffer.isBuffer(packet)&&['DDV1','DDS1','DDB1'].includes(packet.toString('ascii',0,4))){const value=decodeSensors(packet);if(!value)return false;if(value.kind==='DDB1'){const complete=this.barrierFeed.accept(value,now);if(complete){this.barriers=complete;this.barriersAt=now;}}else if(value.kind==='DDV1'){this.damageSensors=value;this.damageAt=now;}else{this.surroundings=value;this.surroundingsAt=now;}return true;}
     if(Buffer.isBuffer(packet)&&packet.toString('ascii',0,4)==='DDT1'){const tires=decodeTirePacket(packet);if(!tires)return false;this.tires=tires;this.tiresAt=now;return true;}
     if (Buffer.isBuffer(packet) && packet.toString('ascii', 0, 4) === 'DDM1') return this.mapFeed.accept(packet, now);
     const decoded = decodePacket(packet);
@@ -144,6 +149,8 @@ class Telemetry extends EventEmitter {
       odometer: vehicleFresh ? this.data.odometer : null,
       tirePressures:vehicleFresh&&this.tires?.vehicleId===this.data.vehicleId&&now-this.tiresAt<2000?this.tires.pressures:null,
       brakeTemperatures:vehicleFresh&&this.tires?.vehicleId===this.data.vehicleId&&now-this.tiresAt<2000?this.tires.brakeTemperatures||null:null,
+      componentDamage:vehicleFresh&&this.damageSensors?.vehicleId===this.data.vehicleId&&now-this.damageAt<1600?this.damageSensors.components:null,
+      surroundings:vehicleFresh&&this.surroundings?.vehicleId===this.data.vehicleId&&now-this.surroundingsAt<700?{...this.surroundings,barrierOrigin:this.barriers?.origin,barrierBatch:this.barriers?.batch,barrierFaces:this.barriers?.vehicleId===this.data.vehicleId&&now-this.barriersAt<2000?this.barriers.barrierFaces:[]}:null,
       connected, ageMs, received: this.received, port: this.port,
       error: this.error,
     };

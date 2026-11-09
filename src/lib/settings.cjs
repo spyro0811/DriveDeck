@@ -5,7 +5,7 @@ const THEMES = ['aura', 'etk', 'hirochi', 'ibishu', 'bmw', 'porsche', 'ferrari',
 const WIDGETS = ['media', 'vehicle', 'journey'];
 const DECKS = ['plaid-track','martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
 const DEFAULTS = Object.freeze({
-  mobilePort:49259, mobileLanding:false, excludeBeamngAudio:true, visualizerMotion:100, bassFlash:false,
+  notificationsEnabled:false,notificationsScope:'all',notificationPromptSeen:false,notificationPreviews:true, mobilePort:49259, mobileLanding:false, excludeBeamngAudio:true, cameraFps:5,renderDistance:120,trafficView:'full',visualizerMotion:100, bassFlash:false,
   theme: 'aura', autoTheme: true, units: 'mph', layout: 'touring', deck: 'ultra', autoDeck: false,
   animatedArtwork: true, animationOrder: ['canvas','apple'], canvasEnabled: true, appleEnabled: true,
   miniPlayerView: 'visualizer', songVisualizer: false, audioView: 'artwork', mapZoom: 1, mapAppearance: 'dark', atlasView: '2d', mapTerrain: true, mapHeadingUp: true, demoDriveMode: 'comfort', civettaPage: 'auto',
@@ -28,9 +28,13 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     if (/^[a-z0-9_-]{1,64}$/i.test(key) && THEMES.includes(theme) && !['__proto__', 'constructor', 'prototype'].includes(key)) mappings[key.toLowerCase()] = theme;
   }
   return {
+    notificationsEnabled:input.notificationsEnabled===true,notificationsScope:input.notificationsScope==='phone'?'phone':'all',notificationPromptSeen:input.notificationPromptSeen===true,notificationPreviews:input.notificationPreviews!==false,
     mobilePort:number('mobilePort',1024,65535),
     mobileLanding:input.mobileLanding===true,
     excludeBeamngAudio:input.excludeBeamngAudio!==false,
+    cameraFps:Math.round(number('cameraFps',0,30)),
+    renderDistance:number('renderDistance',30,120),
+    trafficView:['absolute','full','road','off'].includes(input.trafficView)?input.trafficView:'full',
     visualizerMotion:number('visualizerMotion',0,200),
     bassFlash:input.robobeatUnlocked===true&&input.bassFlash===true,
     animatedArtwork: input.animatedArtwork !== false,
@@ -38,7 +42,7 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     canvasEnabled: input.canvasEnabled !== false, appleEnabled: input.appleEnabled !== false,
     deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')||(input.deck==='robobeat'&&input.robobeatUnlocked===true)) ? input.deck : DEFAULTS.deck,
     robobeatUnlocked:input.robobeatUnlocked===true,
-    plaidView:['temp','clean','plaid','sensors'].includes(input.plaidView)?input.plaidView:'temp',
+    plaidView:['temp','clean','plaid','sensors','stability','plaid-stability'].includes(input.plaidView)?input.plaidView:'temp',
     martinCenter:['artwork','map','map3d','tires'].includes(input.martinCenter)?input.martinCenter:'artwork',
     songVisualizer: input.songVisualizer === true,
     miniPlayerView: 'visualizer',
@@ -79,3 +83,6 @@ function writeSettings(file, settings) {
 }
 
 module.exports = { DEFAULTS, THEMES, WIDGETS, validateSettings, readSettings, writeSettings };
+
+
+

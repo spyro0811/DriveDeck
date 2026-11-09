@@ -5,6 +5,10 @@ const subscribe = channel => callback => {
   return () => ipcRenderer.removeListener(channel, handler);
 };
 contextBridge.exposeInMainWorld('driveDeck', {
+  onCamera:subscribe('camera:frame'),
+  cameraInterest:value=>ipcRenderer.invoke('camera:interest',value),
+  openPhoneLink:()=>ipcRenderer.invoke('notifications:phone-link'),
+  notificationStatus:()=>ipcRenderer.invoke('notifications:status'),notificationHistory:()=>ipcRenderer.invoke('notifications:history'),enableNotifications:()=>ipcRenderer.invoke('notifications:enable'),openNotificationPermissions:()=>ipcRenderer.invoke('notifications:permissions'),onNotification:subscribe('notifications:received'),onNotificationState:subscribe('notifications:state'),onNotificationReset:subscribe('notifications:reset'),
   openMobileInstructions: () => ipcRenderer.invoke('mobile:instructions'),
   mobileStatus: () => ipcRenderer.invoke('mobile:status'),
   startMobile: () => ipcRenderer.invoke('mobile:start'),
@@ -41,3 +45,4 @@ contextBridge.exposeInMainWorld('driveDeck', {
   onMap: subscribe('map:state'),
   onSettings: subscribe('settings:changed'), onFullscreen: subscribe('window:fullscreen-changed'),
 });
+

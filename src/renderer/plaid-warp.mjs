@@ -2,10 +2,10 @@ import {clamp} from './model.mjs';
 export class PlaidWarp{
  constructor(canvas){this.canvas=canvas;this.last=0;this.phase=0;this.reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;}
  draw({mode,ready,speed,now,live}){
-  const enabled=mode==='plaid'||mode==='sensors';this.canvas.hidden=!enabled;if(!enabled||now-this.last<32)return;
+  const enabled=mode==='plaid'||mode==='sensors'||mode==='plaid-stability';this.canvas.hidden=!enabled;if(!enabled||now-this.last<32)return;
   const dt=this.last?Math.min(100,now-this.last):16;this.last=now;
   const c=this.canvas,r=c.getBoundingClientRect();if(!r.width||!r.height)return;const dpr=Math.min(devicePixelRatio||1,1.5),w=r.width,h=r.height;if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);if(!live)return;
-  const energy=clamp(Math.abs(speed)/60,0,1);if(!this.reduced)this.phase=(this.phase+dt*(ready?.000035:.00012+energy*.00023))%1;
+  const velocity=live&&Math.abs(speed)>=.3?Math.abs(speed):0;const energy=clamp(velocity/60,0,1);if(!this.reduced&&velocity>0)this.phase=(this.phase+dt*velocity*.000018)%1;
   const cx=w*.5,cy=h*.44;ctx.save();ctx.translate(cx,ready?h*.5:cy);ctx.scale(1,.88);const glow=ctx.createRadialGradient(0,0,0,0,0,w*(ready?.16:.43));glow.addColorStop(0,'#fffef6');glow.addColorStop(.065,'#fffce7');glow.addColorStop(.16,'#ffed36');glow.addColorStop(.32,'#ffc21ccf');glow.addColorStop(.52,'#ff650989');glow.addColorStop(.78,'#e2341630');glow.addColorStop(1,'#e2341600');ctx.fillStyle=glow;ctx.fillRect(-w,-h,w*2,h*2);ctx.restore();
   ctx.save();ctx.globalAlpha=ready?.22:.9;const colors=['#ffb426','#ff3f35','#ffef7b','#e9499b'];ctx.lineCap='round';
   // Rays extend from the vanishing point all the way across the cluster.
@@ -15,3 +15,5 @@ export class PlaidWarp{
   ctx.restore();const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#000b');shade.addColorStop(.18,'#0000');shade.addColorStop(.78,'#0000');shade.addColorStop(1,'#000b');ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  }
 }
+
+

@@ -182,7 +182,8 @@ export class DeckView {
     if(barVisualizer)this.barLevels.draw(audio,now,settings.demo,media.playing);
     if(['model-s','model-three'].includes(deck))this.tesla.update({deck,settings,data,map,rpm,speed,now});
     if(deck==='plaid-track')this.plaid.update({settings,data,map,rpm,speed,maxRpm,trip,now});
-    if(deck==='martin')this.martin.update({settings,data,rpm,speed,maxRpm,map,media,audio,now,trip},this.palette);
+    if(deck==='martin')this.martin.update({settings,data,rpm,speed,maxRpm,map,media,audio,animation,now,trip},this.palette);
+    if(deck!=='martin')this.martin.motion.update(null,media,false);
     if(deck==='robobeat')this.robobeat.update({settings,data,rpm,speed,maxRpm,audio,media,now});
     if(deck==='arch')updateArch(this.ids,{settings,data,rpm,speed,maxRpm});
     if(deck==='m235')updateM235(this.ids,{settings,data,rpm,speed,maxRpm});
@@ -287,3 +288,4 @@ export class DeckView {
   }
 }
 function titleCase(value){return value.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
+

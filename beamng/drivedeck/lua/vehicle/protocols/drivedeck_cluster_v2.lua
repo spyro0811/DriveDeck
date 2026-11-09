@@ -6,6 +6,40 @@ local vehicleId, vehicleName, engine = '', '', nil
 local driveModeController = nil
 local probeTimer = 10
 local tireTimer = 0
+local cameraTimer=0
+local function componentDamage()
+  local result={}
+  if not damageTracker or not damageTracker.getDamage then return result end
+  local function damaged(group,keys) for _,key in ipairs(keys) do local value=damageTracker.getDamage(group,key);if value==true or (type(value)=='number' and value>0) then return true end end return false end
+  if engine then
+    result.engine=damaged('engine',{'engineLockedUp','engineDisabled','engineHydrolocked','catastrophicOverrevDamage','catastrophicOverTorqueDamage','blockMelted','cylinderWallsMelted'}) and 2 or damaged('engine',{'engineReducedTorque','mildOverrevDamage','impactDamage','headGasketDamaged','pistonRingsDamaged','rodBearingsDamaged'}) and 1 or 0
+    result.cooling=damaged('engine',{'radiatorLeak','oilRadiatorLeak','coolantOverheating','oilOverheating'}) and 1 or 0
+  end
+  for _,device in pairs(powertrain and powertrain.getDevices and powertrain.getDevices() or {}) do
+    local category=device.deviceCategories or {};local key=category.gearbox and 'transmission' or ((device.type=='shaft' or device.type=='differential') and 'driveline' or nil)
+    if key then result[key]=math.max(result[key] or 0,(device.isBroken or device.isDisabled) and 2 or damaged('powertrain',{device.name}) and 1 or 0) end
+  end
+  for _,wheel in pairs(wheels and wheels.wheels or {}) do
+    local key=type(wheel.name)=='string' and wheel.name:upper() or ''
+    if key=='FL' or key=='FR' or key=='RL' or key=='RR' then result[key]=(wheel.isBroken or damaged('wheels',{wheel.name})) and 2 or damaged('wheels',{'tire'..wheel.name,'brake'..wheel.name}) and 1 or 0 end
+  end
+  if beamstate and beamstate.getPartDamageScores then
+    for name,score in pairs(beamstate.getPartDamageScores()) do
+      local n=name:lower();local key=nil
+      local left=n:find('_fl',1,true) or n:find('_rl',1,true) or n:find('_l',1,true) or n:find('left',1,true)
+      local right=n:find('_fr',1,true) or n:find('_rr',1,true) or n:find('_r',1,true) or n:find('right',1,true)
+      if n:find('bumper',1,true) then key=(n:find('_f',1,true) or n:find('front',1,true)) and 'bumperFront' or (n:find('_r',1,true) or n:find('rear',1,true)) and 'bumperRear'
+      elseif n:find('door',1,true) then key=left and 'doorLeft' or right and 'doorRight'
+      elseif n:find('fender',1,true) then key=left and 'fenderFL' or right and 'fenderFR'
+      elseif n:find('quarter',1,true) then key=left and 'quarterRL' or right and 'quarterRR'
+      elseif n:find('hood',1,true) or n:find('bonnet',1,true) then key='hood'
+      elseif n:find('trunk',1,true) or n:find('tailgate',1,true) or n:find('hatch',1,true) then key='trunk' end
+      if key and type(score)=='number' then result[key]=math.max(result[key] or 0,score>=0.7 and 2 or score>0.001 and 1 or 0) end
+    end
+    for _,zone in ipairs({'frontBody','rearBody'}) do local a=damageTracker.getDamage('body',zone=='frontBody' and 'FL' or 'RL');local b=damageTracker.getDamage('body',zone=='frontBody' and 'FR' or 'RR');if type(a)=='number' and type(b)=='number' then local score=math.max(a,b);result[zone]=score>=0.7 and 2 or score>0.001 and 1 or 0 end end
+  end
+  return result
+end
 
 local function copyText(target, value, capacity)
   ffi.fill(target, capacity, 0)
@@ -73,6 +107,8 @@ local function fillStruct(o, dtSim)
   probeTimer = probeTimer + dtSim
   if probeTimer > 1 then probeTimer = 0; discover() end
   local e = electrics.values or {}
+  cameraTimer=cameraTimer+(dtSim or 0)
+  if cameraTimer>.1 then cameraTimer=0;local left=e.signal_L and e.signal_L~=0;local right=e.signal_R and e.signal_R~=0;if left~=right then obj:queueGameEngineLua(string.format('if not extensions.drivedeck_camera then extensions.load("drivedeck_camera") end;if extensions.drivedeck_camera then extensions.drivedeck_camera.signal(%d,%q) end',obj:getID(),left and 'left' or 'right')) end end
   ffi.copy(o.magic, 'DDK2', 4); o.version = 2
   copyText(o.vehicleId, vehicleId, 48); copyText(o.vehicleName, vehicleName, 32)
   o.maxRpm = engine and engine.maxRPM or 8000
@@ -118,7 +154,7 @@ local function fillStruct(o, dtSim)
       end
     end
     if obj.getID then
-      obj:queueGameEngineLua(string.format('if extensions.drivedeck_map then extensions.drivedeck_map.sendTires(%d,%q,%q,%q) end',obj:getID(),vehicleId,jsonEncode(pressures),jsonEncode(brakeTemperatures)))
+      obj:queueGameEngineLua(string.format('if extensions.drivedeck_map then extensions.drivedeck_map.sendTires(%d,%q,%q,%q,%q) end',obj:getID(),vehicleId,jsonEncode(pressures),jsonEncode(brakeTemperatures),jsonEncode(componentDamage())))
     end
   end
 end
@@ -132,3 +168,4 @@ M.isPhysicsStepUsed = function() return false end
 M.getStructDefinition = getStructDefinition
 M.fillStruct = fillStruct
 return M
+

@@ -6,9 +6,12 @@ const currentRelease=require(process.platform==='linux'?'./release-notes-linux.j
 const {shouldShowNotes}=require('./lib/release-notes.cjs');
 let showInstalledNotes=false,notesSeenFile;
 const { Updates } = require('./lib/updates.cjs');
+const {CameraControl}=require('./lib/camera-control.cjs');
 const { Telemetry } = require('./lib/telemetry.cjs');
 const { MobileServer } = require('./lib/mobile.cjs');
 const { pairingCodes } = require('./lib/mobile-qr.cjs');
+const {Notifications}=require('./lib/notifications.cjs');
+const notifications=new Notifications({scriptPath:app.isPackaged?path.join(process.resourcesPath,'native/notifications/launch.ps1'):path.join(__dirname,'../native/notifications/launch.ps1')});
 const { Audio } = require('./lib/audio.cjs');
 const { AnimatedArtwork, ClipLibrary, trackKey } = require('./lib/animated-artwork.cjs');
 const { Media } = require('./lib/media.cjs');
@@ -25,11 +28,11 @@ const telemetry = new Telemetry();
 const media = new Media({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/media.ps1') : path.join(__dirname, '../native/media.ps1') });
 const audio = new Audio({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/audio.ps1') : path.join(__dirname, '../native/audio.ps1') });
 function syncAudio() { audio.configure(settings,media.state); const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
-let animated, updates, updateTimer;
+let animated, updates, updateTimer, cameraControl;
 let window, settings, settingsFile, ticker;
 let saveQueue = Promise.resolve();
 let quitting = false;
-const mobile = new MobileServer({root:__dirname,snapshot:()=>({settings:{units:settings.units,visualizerMotion:settings.visualizerMotion,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
+const mobile = new MobileServer({root:__dirname,drivingView:(mode,options)=>queueSettings({trafficView:mode,...options}),snapshot:()=>({version:app.getVersion(),settings:{units:settings.units,cameraFps:settings.cameraFps,renderDistance:settings.renderDistance,trafficView:settings.trafficView,visualizerMotion:settings.visualizerMotion,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
 
 function displays() {
   return screen.getAllDisplays().map((d, index) => ({
@@ -55,9 +58,12 @@ async function applySettings(patch) {
   const next = validateSettings({ ...settings, ...patch });
   const previousPort = settings.port;
   try {
-    if (next.port !== telemetry.port) await telemetry.listen(next.port);
+    // Unrelated preferences must still save when telemetry failed to bind.
+    // An explicit port edit also serves as a retry of the current port.
+    if (next.port !== previousPort || (Object.hasOwn(patch,'port') && next.port !== telemetry.port)) await telemetry.listen(next.port);
     writeSettings(settingsFile, next);
-    settings = next;
+    if(next.deck!==settings.deck||next.autoDeck!==settings.autoDeck||next.demo!==settings.demo)cameraControl?.report(null);
+    settings = next;notifications.configure(settings);
     animated.update(media.state,settings);
     syncAudio();
     window.setAlwaysOnTop(next.alwaysOnTop);
@@ -78,6 +84,12 @@ function queueSettings(patch) {
 }
 
 function registerHandlers() {
+  handle('camera:interest',value=>{cameraControl?.report(value);return {ok:true};});
+  handle('notifications:phone-link',async()=>{if(process.platform!=='win32')return {ok:false};try{await shell.openExternal('ms-phone:');return {ok:true};}catch{return {ok:false,error:'Phone Link could not be opened. Install or open Phone Link from Windows Start.'};}});
+  handle('notifications:status',()=>notifications.snapshot());
+  handle('notifications:history',()=>notifications.history);
+  handle('notifications:enable',async()=>{if(process.platform!=='win32')return {ok:false,error:'Windows only.'};const result=await queueSettings({notificationsEnabled:true});if(!result.ok)return result;return notifications.start({install:true});});
+  handle('notifications:permissions',async()=>{if(process.platform==='win32')await shell.openExternal('ms-settings:privacy-notifications');return {ok:true};});
   handle('mobile:status',()=>pairingCodes(mobile.status()));
   handle('mobile:start',async()=>{try{let state;try{state=await mobile.start({port:settings.mobilePort});}catch(error){if(error.code!=='EADDRINUSE')throw error;state=await mobile.start({port:0});}if(state.port!==settings.mobilePort||!settings.mobileLanding)await queueSettings({mobilePort:state.port,mobileLanding:true});return await pairingCodes(state);}catch{await mobile.stop();return {running:false,links:[],error:'Could not start the phone dashboard. Try again.'};}});
   handle('mobile:stop',()=>mobile.pause());
@@ -140,6 +152,7 @@ function registerHandlers() {
     return error ? { ok: false, error } : { ok: true };
   });
   handle('beamng:install', async () => {
+    const safety=await require('./lib/companion-state.cjs').companionInstallSafety();if(!safety.ok)return safety;
     const locations=require('./lib/platform-paths.cjs').platformPaths();
     let root;
     if(process.platform==='linux'){
@@ -154,6 +167,7 @@ function registerHandlers() {
     const backup = path.join(root, 'drivedeck-backups', String(Date.now()));
     const moved = [];
     try {
+      const safety=await require('./lib/companion-state.cjs').companionInstallSafety();if(!safety.ok)return safety;
       const bytes = fs.readFileSync(source);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(`${target}.tmp`, bytes);
@@ -179,7 +193,7 @@ async function createWindow() {
   const existingSettings=fs.existsSync(settingsFile);
   showInstalledNotes=!smoke&&shouldShowNotes(notesSeenFile,app.getVersion(),existingSettings);
   if(!existingSettings)fs.writeFileSync(notesSeenFile,JSON.stringify({version:app.getVersion()}));
-  settings = readSettings(settingsFile);
+  settings = readSettings(settingsFile);notifications.configure(settings);
   if(smoke)settings.animatedArtwork=false;
   animated=new AnimatedArtwork({library:new ClipLibrary(path.join(app.getPath('userData'),'animated-artwork'))});
   animated.on('state', state => send('animation:state',state));
@@ -214,10 +228,21 @@ async function createWindow() {
   media.start();
   media.on('state', state => {send('media:state', state);animated.update(state,settings);});
   telemetry.mapFeed.on('update', patch => send('map:state', patch));
+  const cameraRoot=require('./lib/platform-paths.cjs').platformPaths().user;
+  cameraControl=new CameraControl({root:cameraRoot});
+  let cameraBusy=false,cameraStamp=0,cameraNext=0;
+  const cameraTimer=setInterval(async()=>{
+    const config=cameraControl.update(settings,{sceneDeck:mobile.sceneDeck(),visible:!quitting&&window&&!window.isDestroyed()&&window.isVisible()&&!window.isMinimized()});
+    if(!config.cameraEnabled||cameraBusy||Date.now()<cameraNext)return;
+    cameraNext=Date.now()+1000/config.fps;cameraBusy=true;
+    try{const file=path.join(cameraRoot,'drivedeck-side-camera.png'),stat=await fs.promises.stat(file);if(Date.now()-stat.mtimeMs>900||stat.mtimeMs===cameraStamp||stat.size>700000)return;const meta=JSON.parse(await fs.promises.readFile(path.join(cameraRoot,'drivedeck-side-camera.json'),'utf8'));if(!['left','right'].includes(meta.side))return;const bytes=await fs.promises.readFile(file);if(bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||quitting)return;cameraStamp=stat.mtimeMs;send('camera:frame',{side:meta.side,image:'data:image/png;base64,'+bytes.toString('base64')});}catch{}finally{cameraBusy=false;}
+  },33);
+  app.once('before-quit',()=>{clearInterval(cameraTimer);cameraControl.stop();});
   let mapTick = 0;
   ticker = setInterval(() => { send('telemetry:state', telemetry.snapshot()); syncAudio(); if (++mapTick % 15 === 0) send('map:state', { connected: telemetry.mapFeed.snapshot().connected }); }, 1000 / 30);
   if(settings.mobileLanding){try{await mobile.start({port:settings.mobilePort,paused:true});}catch{/* The Start button can pick and save another free port. */}}
-  await window.loadFile(page);
+  notifications.on('state',state=>send('notifications:state',state));notifications.on('notification',value=>send('notifications:received',value));notifications.on('reset',()=>send('notifications:reset',{}));
+  await window.loadFile(page);if(settings.notificationsEnabled&&!smoke)void notifications.start();
   if (!smoke) {
     updateTimer=setTimeout(()=>updates.check(),4000);
     window.show();
@@ -238,5 +263,8 @@ app.on('before-quit', () => {
   if (quitting) return;
   quitting = true;
   void mobile.stop();
-  clearTimeout(updateTimer); clearInterval(ticker); telemetry.close(); media.stop(); audio.stop(); animated?.stop();
+  notifications.stop();clearTimeout(updateTimer); clearInterval(ticker); telemetry.close(); media.stop(); audio.stop(); animated?.stop();
 });
+
+
+

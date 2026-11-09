@@ -1,3 +1,4 @@
+import {NotificationView} from './notifications.mjs';
 import {renderMobilePairing} from './mobile-pairing.mjs';
 import {parsePortEntry} from './robobeat.mjs';
 import { UpdatesView } from './updates.mjs';
@@ -22,6 +23,7 @@ let audioState = {available:false,bands:[]};
 let mapState = { connected: false, roads: [], route: [], position: null }, deckView;
 let displayList = [], panelTab = 'themes', previousFocus, saveQueue = Promise.resolve();
 let demoStarted = performance.now(), demoPaused = false, demoTrack = 0, demoPosition = 67, demoLastTick = performance.now();
+let notificationView;
 let smoothRpm = 0, smoothSpeed = 0, lastFrame = null, lastSlowFrame = 0, lastMediaRender = '';
 let gaugeKey = '', toastTimer, hasEverConnected = false, fullscreen = false;
 const liveTrip = new Trip(), demoTrip = new Trip();
@@ -80,7 +82,7 @@ function applyTheme(vehicleId) {
 function applySettings(next) {
   if(!!settings?.robobeatUnlocked!==!!next.robobeatUnlocked){availableDecks=decksForPlatform(appPlatform,next.robobeatUnlocked);deckCards();bindDeckCards();}
   const demoChanged = settings && settings.demo !== next.demo;
-  settings = next;
+  settings = next;notificationView?.configure(settings);
   $('animated-artwork').checked=settings.animatedArtwork;
   $('canvas-enabled').checked=settings.canvasEnabled; $('apple-enabled').checked=settings.appleEnabled;
   $('animation-first').value=settings.animationOrder?.[0]||'canvas';
@@ -111,6 +113,8 @@ function applySettings(next) {
   $('exclude-beamng-audio').checked=settings.excludeBeamngAudio!==false;
   $('bass-flash-row').hidden=!settings.robobeatUnlocked;$('bass-flash').checked=!!settings.bassFlash;
   if(document.activeElement!==$('visualizer-motion'))$('visualizer-motion').value=settings.visualizerMotion??100;
+  $('traffic-view').value=settings.trafficView||'full';$('camera-fps').disabled=!!settings.trafficView&&!['full','absolute'].includes(settings.trafficView);
+  if(document.activeElement!==$('camera-fps'))$('camera-fps').value=settings.cameraFps??5;text('camera-fps-value',settings.cameraFps===0?'Off':(settings.cameraFps??5)+' FPS');
   text('visualizer-motion-value',`${settings.visualizerMotion??100}%`);
   text('brightness-value', `${settings.brightness}%`);
   $('demo-button').classList.toggle('demo-active', settings.demo);
@@ -233,12 +237,15 @@ function renderSlow(data, now) {
   text('clock', new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()));
 }
 
+let cameraInterestKey, cameraInterestAt=-Infinity;
 function frame(now) {
   const dt = lastFrame === null ? 16 : Math.min(100, now - lastFrame); lastFrame = now;
   const demo = settings.demo;
   const data = demo ? demoTelemetry((now - demoStarted) / 1000) : live;
   const effectiveDeck = resolveDeck(settings, data);
   $('app').dataset.deck = effectiveDeck;
+  const cameraInterest={deck:effectiveDeck,live:!demo&&data.connected,visible:document.visibilityState!=='hidden'},cameraKey=JSON.stringify(cameraInterest);
+  if(cameraKey!==cameraInterestKey||now-cameraInterestAt>500){cameraInterestKey=cameraKey;cameraInterestAt=now;void api.cameraInterest?.(cameraInterest).catch(()=>{});}
   liveTrip.update(live, now); if (demo) demoTrip.update(data, now);
   const maxRpm = !demo && data.connected && Number.isFinite(data.maxRpm) && data.maxRpm >= 1000 ? data.maxRpm : settings.maxRpm;
   const redline = Math.min(settings.redline, maxRpm);
@@ -345,6 +352,8 @@ function bindEvents() {
   $('exclude-beamng-audio').onchange=e=>save({excludeBeamngAudio:e.target.checked});
   $('bass-flash').onchange=e=>save({bassFlash:e.target.checked});
   $('visualizer-motion').oninput=e=>{settings.visualizerMotion=Number(e.target.value);text('visualizer-motion-value',`${e.target.value}%`);};
+  $('traffic-view').onchange=e=>save({trafficView:e.target.value});
+  $('camera-fps').oninput=e=>text('camera-fps-value',Number(e.target.value)===0?'Off':e.target.value+' FPS');$('camera-fps').onchange=e=>save({cameraFps:Number(e.target.value)});
   $('visualizer-motion').onchange=e=>save({visualizerMotion:Number(e.target.value)});
   $('brightness').onchange = event => save({ brightness: Number(event.target.value) });
   $('units-select').onchange = event => { smoothSpeed = 0; void save({ units: event.target.value }); };
@@ -372,8 +381,10 @@ function bindEvents() {
 
 async function boot() {
   hydrateIcons(); deckCards();
+  api.onCamera?.(frame=>{const image=new Image();image.onload=()=>{window.driveDeckCamera={image,side:frame.side,time:performance.now()};};image.src=frame.image;});
   classicLevels=new AudioCanvas($('classic-levels'),6);
-  deckView = new DeckView($('deck-stage'), { playback, seek:seekMedia, atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), plaidView:value=>save({plaidView:value}), martinCenter:value=>save({martinCenter:value}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
+  notificationView=new NotificationView(api,save);
+  deckView = new DeckView($('deck-stage'), { playback, seek:seekMedia, atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), trafficView:value=>save({trafficView:value}),drivingOptions:patch=>save(patch), plaidView:value=>save({plaidView:value}), martinCenter:value=>save({martinCenter:value}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
   classicMotion=new MotionArtwork($('album-motion'),(source,key)=>api.animationFailed?.(source,key));
   const revs = document.createElement('div'); revs.className = 'sport-revs'; revs.setAttribute('aria-hidden', 'true'); revs.innerHTML = '<i></i>'.repeat(28); document.querySelector('.cluster').append(revs);
   api.onTelemetry(value => { live = value; }); api.onMedia(value => { media = value; }); api.onSettings(applySettings);
@@ -394,6 +405,9 @@ async function boot() {
   $('app').dataset.fullscreen = String(!!fullscreen);
   $('resolution-width').value=initial.settings.windowWidth||1560;$('resolution-height').value=initial.settings.windowHeight||650;const selectedSize=$('resolution-width').value+'x'+$('resolution-height').value;$('resolution-preset').value=[...$('resolution-preset').options].some(o=>o.value===selectedSize)?selectedSize:'custom';
   appPlatform=initial.platform;availableDecks=decksForPlatform(initial.platform,initial.settings.robobeatUnlocked);deckCards();applySettings(initial.settings); text('app-version', `VERSION ${initial.version}${initial.platform==='linux'?' · LINUX EXPERIMENTAL':''}`); bindEvents();
+  void notificationView.offerSetup(initial.platform,initial.settings);
   $('app').dataset.ready = 'true'; requestAnimationFrame(frame);
 }
 boot().catch(error => { console.error(error); toast(`DriveDeck could not start: ${error.message}`, true); });
+
+
