@@ -1,9 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { sanitizeViewedDecks } = require('../renderer/deck-library.mjs');
+const { sanitizeLayout, sanitizePresets, sanitizeModularAppearance, starterPresets } = require('../renderer/modular-layout.mjs');
 
 const THEMES = ['aura', 'etk', 'hirochi', 'ibishu', 'bmw', 'porsche', 'ferrari', 'custom'];
 const WIDGETS = ['media', 'vehicle', 'journey'];
-const DECKS = ['plaid-track','martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'levels', 'vivace'];
+const DECKS = ['plaid-track','martin', 'm235', 'model-s', 'model-three', 'civetta', 'homosexual', 'iadnuyh', 'ultra', 'atlas', 'pure', 'sound', 'lyrics', 'modular', 'levels', 'vivace'];
 const DEFAULTS = Object.freeze({
   notificationsEnabled:false,notificationsScope:'all',notificationPromptSeen:false,notificationPreviews:true, mobilePort:49259, mobileLanding:false, excludeBeamngAudio:true, cameraFps:5,renderDistance:120,trafficView:'full',visualizerMotion:100, bassFlash:false,
   theme: 'aura', autoTheme: true, units: 'mph', layout: 'touring', deck: 'ultra', autoDeck: false,
@@ -27,6 +29,13 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
   for (const [key, theme] of Object.entries(rawMappings).slice(0, 100)) {
     if (/^[a-z0-9_-]{1,64}$/i.test(key) && THEMES.includes(theme) && !['__proto__', 'constructor', 'prototype'].includes(key)) mappings[key.toLowerCase()] = theme;
   }
+  const modularLayout = sanitizeLayout(input.modularLayout);
+  const modularPresets = sanitizePresets(input.modularPresets);
+  const modularDesktopConfigured = modularLayout.length > 0 && (
+    input.modularDesktopConfigured === true ||
+    JSON.stringify(modularLayout) !== JSON.stringify(starterPresets[0].layout) ||
+    modularPresets.some(preset => preset.layout.length > 0)
+  );
   return {
     notificationsEnabled:input.notificationsEnabled===true,notificationsScope:input.notificationsScope==='phone'?'phone':'all',notificationPromptSeen:input.notificationPromptSeen===true,notificationPreviews:input.notificationPreviews!==false,
     mobilePort:number('mobilePort',1024,65535),
@@ -40,13 +49,18 @@ function validateSettings(input = {}, {platform=process.platform} = {}) {
     animatedArtwork: input.animatedArtwork !== false,
     animationOrder: Array.isArray(input.animationOrder) && input.animationOrder[0] === 'apple' ? ['apple','canvas'] : ['canvas','apple'],
     canvasEnabled: input.canvasEnabled !== false, appleEnabled: input.appleEnabled !== false,
-    deck: (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')||(input.deck==='robobeat'&&input.robobeatUnlocked===true)) ? input.deck : DEFAULTS.deck,
+    deck: input.deck === 'scenes' ? 'lyrics' : (DECKS.includes(input.deck)||(platform==='linux'&&input.deck==='arch')||(input.deck==='robobeat'&&input.robobeatUnlocked===true)) ? input.deck : DEFAULTS.deck,
+    viewedFeaturedDecks: sanitizeViewedDecks(input.viewedFeaturedDecks),
+    modularLayout,
+    modularPresets,
+    modularDesktopConfigured,
+    modularAppearance: sanitizeModularAppearance(input.modularAppearance),
     robobeatUnlocked:input.robobeatUnlocked===true,
     plaidView:['temp','clean','plaid','sensors','stability','plaid-stability'].includes(input.plaidView)?input.plaidView:'temp',
     martinCenter:['artwork','map','map3d','tires'].includes(input.martinCenter)?input.martinCenter:'artwork',
     songVisualizer: input.songVisualizer === true,
-    miniPlayerView: 'visualizer',
-    audioView: input.audioView === 'visualizer' ? 'visualizer' : 'artwork',
+    miniPlayerView: input.miniPlayerView === 'lyrics' ? 'lyrics' : 'visualizer',
+    audioView: ['visualizer', 'lyrics'].includes(input.audioView) ? input.audioView : 'artwork',
     autoDeck: input.autoDeck === true,
     mapZoom: typeof input.mapZoom === 'number' && Number.isFinite(input.mapZoom) ? Math.max(.4, Math.min(3, input.mapZoom)) : 1,
     mapTerrain: input.mapTerrain !== false,

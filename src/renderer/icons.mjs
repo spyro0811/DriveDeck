@@ -11,6 +11,7 @@ const paths = {
   play: '<path d="m9 5 11 7-11 7Z" fill="currentColor" stroke="none"/>',
   pause: '<path d="M7 5h4v14H7zm7 0h4v14h-4z" fill="currentColor" stroke="none"/>',
   previous: '<path d="M5 5v14m14-14L8 12l11 7Z"/>', next: '<path d="M19 5v14M5 5l11 7-11 7Z"/>',
+  spectrum: '<path d="M4 10v4m4-8v12m4-15v18m4-13v8m4-6v4"/>',
   audio: '<path d="M3 10v4h4l5 4V6l-5 4Zm13-2a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
   fuel: '<path d="M4 21V4h10v17M4 8h10M2 21h14m-2-10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 4 0V8l-3-3"/><path d="m19 5-1 3 4 3"/>',
   temperature: '<path d="M9 14V5a3 3 0 0 1 6 0v9a5 5 0 1 1-6 0Z"/><path d="M12 9v9m6-12h3m-3 4h3"/>',

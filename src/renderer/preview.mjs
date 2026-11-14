@@ -10,7 +10,8 @@ export function previewApi() {
   };
   let settings = { ...defaults };
   try { settings = { ...defaults, ...JSON.parse(localStorage.getItem('drivedeck-preview') || '{}') }; } catch {}
-  if(['classic','lyrics'].includes(settings.deck))settings.deck='ultra';settings.miniPlayerView='visualizer';
+  if(settings.deck==='scenes')settings.deck='lyrics';
+  if(settings.deck==='classic')settings.deck='ultra';
   const listeners = [];
   const unavailable = async () => ({ ok: false, error: 'This control is available in the DriveDeck desktop app.' });
   return {

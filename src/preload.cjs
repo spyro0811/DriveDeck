@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('driveDeck', {
   removeCanvasClip: () => ipcRenderer.invoke('animation:remove-canvas'),
   openAnimationSource: () => ipcRenderer.invoke('animation:open-source'),
   onAnimation: subscribe('animation:state'),
+  lyrics: () => ipcRenderer.invoke('media:lyrics'),
   seekMedia: seconds => ipcRenderer.invoke('media:seek', seconds),
   mediaCommand: action => ipcRenderer.invoke('media:command', action),
   setResolution: (width,height) => ipcRenderer.invoke('window:resolution',width,height),

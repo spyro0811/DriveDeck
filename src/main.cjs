@@ -14,6 +14,8 @@ const {Notifications}=require('./lib/notifications.cjs');
 const notifications=new Notifications({scriptPath:app.isPackaged?path.join(process.resourcesPath,'native/notifications/launch.ps1'):path.join(__dirname,'../native/notifications/launch.ps1')});
 const { Audio } = require('./lib/audio.cjs');
 const { AnimatedArtwork, ClipLibrary, trackKey } = require('./lib/animated-artwork.cjs');
+const { Lyrics } = require('./lib/lyrics.cjs');
+const lyrics = new Lyrics(app.getVersion());
 const { Media } = require('./lib/media.cjs');
 const { VehiclePreview } = require('./lib/vehicle-preview.cjs');
 const vehiclePreviews = new VehiclePreview();
@@ -27,12 +29,17 @@ const pageUrl = pathToFileURL(page).href;
 const telemetry = new Telemetry();
 const media = new Media({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/media.ps1') : path.join(__dirname, '../native/media.ps1') });
 const audio = new Audio({ scriptPath: app.isPackaged ? path.join(process.resourcesPath, 'native/audio.ps1') : path.join(__dirname, '../native/audio.ps1') });
-function syncAudio() { audio.configure(settings,media.state); const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||deck==='levels'||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
+function syncAudio() { audio.configure(settings,media.state); const deck=settings.autoDeck&&telemetry.snapshot().vehicleId==='vivace'?'vivace':settings.deck; if((mobile.status().running||settings.miniPlayerView==='visualizer'||['levels','lyrics','modular','robobeat'].includes(deck)||(deck==='martin'&&settings.martinCenter==='artwork')||(deck==='sound'&&(settings.audioView==='visualizer'||settings.songVisualizer)))&&!settings.demo)audio.start();else if(audio.child||audio.state.starting||audio.state.error)audio.stop(); }
 let animated, updates, updateTimer, cameraControl;
 let window, settings, settingsFile, ticker;
 let saveQueue = Promise.resolve();
 let quitting = false;
-const mobile = new MobileServer({root:__dirname,drivingView:(mode,options)=>queueSettings({trafficView:mode,...options}),snapshot:()=>({version:app.getVersion(),settings:{units:settings.units,cameraFps:settings.cameraFps,renderDistance:settings.renderDistance,trafficView:settings.trafficView,visualizerMotion:settings.visualizerMotion,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
+const mobile = new MobileServer({root:__dirname,lyrics:()=>lyrics.lookup(media.state),drivingView:(mode,options)=>queueSettings({trafficView:mode,...options}),snapshot:deck=>({version:app.getVersion(),...(deck==='modular'?{modular:desktopModularSnapshot()}:{}),settings:{units:settings.units,cameraFps:settings.cameraFps,renderDistance:settings.renderDistance,trafficView:settings.trafficView,visualizerMotion:settings.visualizerMotion,maxRpm:settings.maxRpm,redline:settings.redline,mapTerrain:settings.mapTerrain},data:telemetry.snapshot(),media:{...media.state,canToggle:false,canNext:false,canPrevious:false,canSeek:false},audio:audio.state}),map:()=>telemetry.mapFeed.snapshot(),preview:()=>{const data=telemetry.snapshot();return vehiclePreviews.get(data.vehicleId,data.vehicleName);}});
+
+function desktopModularSnapshot() {
+  if (!settings.modularDesktopConfigured) return { ready: false };
+  return { ready: true, layout: settings.modularLayout, appearance: settings.modularAppearance };
+}
 
 function displays() {
   return screen.getAllDisplays().map((d, index) => ({
@@ -113,6 +120,7 @@ function registerHandlers() {
     try{animated.library.add(current,result.filePaths[0]);animated.retry();return {ok:true};}catch(error){return {ok:false,error:error.message};}
   });
   handle('animation:open-source', async () => {const url=animated.state.pageUrl;if(url&&/^https:\/\/music\.apple\.com\/us\/album\/\d+$/.test(url)){await shell.openExternal(url);return {ok:true};}return {ok:false};});
+  handle('media:lyrics', () => lyrics.lookup(media.state));
   handle('media:seek', seconds => media.command('seek',seconds));
   handle('media:command', action => media.command(action));
   handle('window:fullscreen', () => { window.setFullScreen(!window.isFullScreen()); return { ok: true }; });

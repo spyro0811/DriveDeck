@@ -26,4 +26,18 @@ test('BeamNG creates no camera without a fresh allowed deck, destroys it after e
  config.expiresAt=107;config.deck='model-s';m.signal(1,'right');m.onUpdate(.25);assert(created==2);config=nil;m.onUpdate(.25);assert(destroyed==2,'Unreadable config must disable rendering');
  config={cameraEnabled=true,deck='model-s',fps=10,sceneMode='road',expiresAt=107};m.signal(1,'right');m.onUpdate(.25);assert(created==2,'Road-only mode must not render a camera')`);
 });
-test('Only paired active phone Model S/Three views retain scenery, and pausing revokes it',async()=>{const {MobileServer}=require('../src/lib/mobile.cjs');const server=new MobileServer({root:path.resolve(__dirname,'../src'),snapshot:()=>({}),map:()=>({}),preview:()=>({})});try{await server.start({host:'127.0.0.1'});const base=`http://127.0.0.1:${server.status().port}`;assert.equal(server.sceneDeck(),null);await fetch(base+'/api/state?deck=model-three');assert.equal(server.sceneDeck(),null);const headers={Authorization:'Bearer '+server.token};await fetch(base+'/api/state?deck=model-three',{headers});assert.equal(server.sceneDeck(),'model-three');await fetch(base+'/api/state?deck=martin',{headers});assert.equal(server.sceneDeck(),null);await fetch(base+'/api/state?deck=model-s',{headers});assert.equal(server.sceneDeck(),'model-s');server.pause();assert.equal(server.sceneDeck(),null);}finally{await server.stop();}});
+test('Only paired active phone driving views retain scenery, and pausing revokes it',async()=>{const {MobileServer}=require('../src/lib/mobile.cjs');const server=new MobileServer({root:path.resolve(__dirname,'../src'),snapshot:()=>({}),map:()=>({}),preview:()=>({})});try{await server.start({host:'127.0.0.1'});const base=`http://127.0.0.1:${server.status().port}`;assert.equal(server.sceneDeck(),null);await fetch(base+'/api/state?deck=model-three');assert.equal(server.sceneDeck(),null);const headers={Authorization:'Bearer '+server.token};await fetch(base+'/api/state?deck=model-three',{headers});assert.equal(server.sceneDeck(),'model-three');await fetch(base+'/api/state?deck=martin',{headers});assert.equal(server.sceneDeck(),null);await fetch(base+'/api/state?deck=model-s',{headers});assert.equal(server.sceneDeck(),'model-s');await fetch(base+'/api/state?deck=modular',{headers});assert.equal(server.sceneDeck(),null);await fetch(base+'/api/state?deck=modular&surroundings=1',{headers});assert.equal(server.sceneDeck(),'modular');server.pause();assert.equal(server.sceneDeck(),null);}finally{await server.stop();}});
+test('Ultra Modular requests live surroundings only with the tile present, without starting the camera',()=>{
+ const controller=new CameraControl({root:'test',now:()=>100000,write:()=>{},rename:()=>{}});
+ const settings={deck:'modular',trafficView:'road',cameraFps:10};
+ controller.report({deck:'modular',live:true,visible:true});
+ assert.equal(controller.update(settings,{visible:true}).sceneMode,'off');
+ controller.report({deck:'modular',surroundings:true,live:true,visible:true});
+ const active=controller.update(settings,{visible:true});
+ assert.equal(active.sceneMode,'full');
+ assert.equal(active.deck,'model-s');
+ assert.equal(active.cameraEnabled,false);
+ assert.equal(controller.update(settings,{visible:false}).sceneMode,'off');
+ assert.equal(controller.update(settings,{sceneDeck:'modular'}).sceneMode,'full');
+ assert.equal(controller.update({ ...settings, deck:'martin' },{visible:true}).sceneMode,'off');
+});

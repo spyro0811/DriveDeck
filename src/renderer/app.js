@@ -10,12 +10,14 @@ import { demoTelemetry, demoMedia } from './demo.mjs';
 import { clamp, speedInUnits, gearLabel, durationLabel, arcPath, Trip } from './model.mjs';
 import { previewApi } from './preview.mjs';
 import { DECKS, decksForPlatform, DeckView, resolveDeck } from './decks.mjs';
+import { deckLibraryOrder, featuredDeckIds, sanitizeViewedDecks } from './deck-library.mjs';
 import { demoMap } from './map.mjs';
 
 const $ = id => document.getElementById(id);
 const api = window.driveDeck || previewApi();
 const nodes = Object.fromEntries([...document.querySelectorAll('[id]')].map(el => [el.id, el]));
 let availableDecks=DECKS,appPlatform;
+const viewedDecks = new Set();
 let settings, live = { connected: false }, media = { available: false }, activeTheme;
 let animationState={source:'cover',url:null,providers:{}},classicMotion;
 let classicLevels;
@@ -48,9 +50,18 @@ async function save(patch, message) {
   saveQueue = job.catch(() => {}); return job;
 }
 
-function bindDeckCards(){document.querySelectorAll('[data-deck-choice]').forEach(button=>{button.onclick=async()=>{if(await save({deck:button.dataset.deckChoice,autoDeck:false}))$('deck-library').close();};});}
 function deckCards() {
-  $('deck-grid').innerHTML = availableDecks.map(deck => `<button class="deck-choice" data-deck-choice="${deck.id}" aria-label="Choose ${deck.name}"><img src="assets/decks/${deck.id}.png" alt="${deck.name} dashboard preview"><div><strong>${deck.name}</strong><small>${deck.note}</small></div></button>`).join('');
+  $('deck-grid').innerHTML = deckLibraryOrder(availableDecks, viewedDecks).map(({id, name, note, isNew}) => {
+    const selected = id === settings?.deck;
+    return `<button class="deck-choice${selected ? ' selected' : ''}" data-deck-choice="${id}" aria-label="Choose ${name}${isNew ? ' (new)' : ''}" aria-pressed="${selected}"><img src="assets/decks/${id}.png" alt="${name} dashboard preview"><div><strong class="deck-card-name">${name}${isNew ? '<span class="deck-new-tag">NEW</span>' : ''}</strong><small>${note}</small></div></button>`;
+  }).join('');
+}
+
+function markDeckViewed(deck) {
+  if (!featuredDeckIds.includes(deck) || viewedDecks.has(deck) || document.hidden || $('deck-library').open) return;
+  viewedDecks.add(deck);
+  deckCards();
+  void save({ viewedFeaturedDecks: [...viewedDecks] });
 }
 
 // Preserve legacy saved widget layouts without exposing retired customization controls.
@@ -80,9 +91,13 @@ function applyTheme(vehicleId) {
 }
 
 function applySettings(next) {
-  if(!!settings?.robobeatUnlocked!==!!next.robobeatUnlocked){availableDecks=decksForPlatform(appPlatform,next.robobeatUnlocked);deckCards();bindDeckCards();}
+  const previousViews = viewedDecks.size;
+  for (const deck of sanitizeViewedDecks(next.viewedFeaturedDecks)) viewedDecks.add(deck);
+  const libraryChanged = !!settings?.robobeatUnlocked !== !!next.robobeatUnlocked;
+  if (libraryChanged) availableDecks = decksForPlatform(appPlatform, next.robobeatUnlocked);
   const demoChanged = settings && settings.demo !== next.demo;
   settings = next;notificationView?.configure(settings);
+  if (libraryChanged || viewedDecks.size !== previousViews) deckCards();
   $('animated-artwork').checked=settings.animatedArtwork;
   $('canvas-enabled').checked=settings.canvasEnabled; $('apple-enabled').checked=settings.appleEnabled;
   $('animation-first').value=settings.animationOrder?.[0]||'canvas';
@@ -244,7 +259,7 @@ function frame(now) {
   const data = demo ? demoTelemetry((now - demoStarted) / 1000) : live;
   const effectiveDeck = resolveDeck(settings, data);
   $('app').dataset.deck = effectiveDeck;
-  const cameraInterest={deck:effectiveDeck,live:!demo&&data.connected,visible:document.visibilityState!=='hidden'},cameraKey=JSON.stringify(cameraInterest);
+  const cameraInterest={deck:effectiveDeck,surroundings:effectiveDeck==='modular'&&deckView.modular.hasTile('traffic'),live:!demo&&data.connected,visible:document.visibilityState!=='hidden'},cameraKey=JSON.stringify(cameraInterest);
   if(cameraKey!==cameraInterestKey||now-cameraInterestAt>500){cameraInterestKey=cameraKey;cameraInterestAt=now;void api.cameraInterest?.(cameraInterest).catch(()=>{});}
   liveTrip.update(live, now); if (demo) demoTrip.update(data, now);
   const maxRpm = !demo && data.connected && Number.isFinite(data.maxRpm) && data.maxRpm >= 1000 ? data.maxRpm : settings.maxRpm;
@@ -257,6 +272,7 @@ function frame(now) {
   deckView.update({ animation:animationState, settings, data, audio: audioState, map: demo ? demoMap((now - demoStarted) / 1000) : mapState,
     media: demo ? currentDemoMedia(now) : media, rpm: smoothRpm, speed: smoothSpeed, maxRpm,
     trip: demo ? demoTrip : liveTrip, now });
+  markDeckViewed(effectiveDeck);
   text('speed-value', data.connected ? Math.round(smoothSpeed) : '—');
   text('rpm-value', data.connected ? (smoothRpm / 1000).toFixed(1) : '—');
   const ratio = clamp(smoothRpm / maxRpm, .00001, 1);
@@ -317,7 +333,10 @@ function bindEvents() {
   $('deck-library-close').onclick=()=>$('deck-library').close();
   $('deck-library-open').onclick=()=>{closePanel();$('deck-library').showModal();};
   $('deck-library').onclick=e=>{if(e.target===$('deck-library'))$('deck-library').close();};
-  document.querySelectorAll('[data-deck-choice]').forEach(button => { button.onclick = async () => {if(await save({ deck: button.dataset.deckChoice, autoDeck: false }))$('deck-library').close();}; });
+  $('deck-grid').onclick = async event => {
+    const button = event.target.closest('[data-deck-choice]');
+    if (button && await save({ deck: button.dataset.deckChoice, autoDeck: false })) $('deck-library').close();
+  };
   $('auto-deck').onchange = event => save({ autoDeck: event.target.checked });
   $('demo-drive-mode').onchange = event => save({ demoDriveMode: event.target.value });
   $('map-terrain').onchange = event => save({mapTerrain:event.target.checked});
@@ -384,7 +403,7 @@ async function boot() {
   api.onCamera?.(frame=>{const image=new Image();image.onload=()=>{window.driveDeckCamera={image,side:frame.side,time:performance.now()};};image.src=frame.image;});
   classicLevels=new AudioCanvas($('classic-levels'),6);
   notificationView=new NotificationView(api,save);
-  deckView = new DeckView($('deck-stage'), { playback, seek:seekMedia, atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), trafficView:value=>save({trafficView:value}),drivingOptions:patch=>save(patch), plaidView:value=>save({plaidView:value}), martinCenter:value=>save({martinCenter:value}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
+  deckView = new DeckView($('deck-stage'), { playback, seek:seekMedia, lyrics:api.lyrics, modularSave: patch => save(patch.modularLayout?.length ? { ...patch, modularDesktopConfigured:true } : patch), atlasView:()=>save({atlasView:settings.atlasView==='3d'?'2d':'3d'}), trafficView:value=>save({trafficView:value}),drivingOptions:patch=>save(patch), plaidView:value=>save({plaidView:value}), martinCenter:value=>save({martinCenter:value}), civettaPage:value=>save({civettaPage:value}), miniPlayerView:value=>save({miniPlayerView:value}), animationFailed:(source,key)=>api.animationFailed?.(source,key), audioView: value => save({audioView:value}), songVisualizer: () => save({songVisualizer:!settings.songVisualizer}), zoom: factor => save({ mapZoom: clamp(settings.mapZoom * factor, .4, 3) }), compass: () => save({ mapHeadingUp: !settings.mapHeadingUp }) });
   classicMotion=new MotionArtwork($('album-motion'),(source,key)=>api.animationFailed?.(source,key));
   const revs = document.createElement('div'); revs.className = 'sport-revs'; revs.setAttribute('aria-hidden', 'true'); revs.innerHTML = '<i></i>'.repeat(28); document.querySelector('.cluster').append(revs);
   api.onTelemetry(value => { live = value; }); api.onMedia(value => { media = value; }); api.onSettings(applySettings);

@@ -45,7 +45,7 @@ export function updateHomosexual(ids,{settings,data,map,rpm,speed,maxRpm,trip,no
  ids['h-speed-needle'].style.transform=`rotate(${145+clamp(speed/(km?320:200),0,1)*250}deg)`;ids['h-rpm-needle'].style.transform=`rotate(${145+clamp(rpm/10000,0,1)*250}deg)`;
  for(const name of ['speed','rpm'])ids[`h-${name}-needle`].style.opacity=live?'1':'.15';
  ids['h-rpm-needle'].classList.toggle('h-redline',live&&rpm>=Math.min(maxRpm,settings.redline));
- document.querySelectorAll('[data-h-speed]').forEach(e=>{e.textContent=Math.round(Number(e.dataset.hSpeed)*(km?320:200))});
+ ids['homosexual-deck'].querySelectorAll('[data-h-speed]').forEach(e=>{e.textContent=Math.round(Number(e.dataset.hSpeed)*(km?320:200))});
  put('h-gear',live?(data.selectedGear||gearLabel(data.gear)):'—');put('h-fuel',live&&Number.isFinite(data.fuel)?`${Math.round(data.fuel*100)}% FUEL`:'FUEL —');ids['h-fuel-arc'].style.strokeDasharray=`${live?clamp(data.fuel||0,0,1)*100:0} 100`;
  put('h-status',settings.demo?'DEMO · SIMULATED DATA':live?'LIVE VEHICLE DATA':'WAITING FOR BEAMNG');put('h-trip',`TRIP ${(trip.meters/(km?1000:1609.344)).toFixed(1)} ${km?'km':'mi'}`);
  put('h-temp',live&&Number.isFinite(data.engineTemp)?`COOLANT ${Math.round(km?data.engineTemp:data.engineTemp*9/5+32)}°${km?'C':'F'}`:'COOLANT —');

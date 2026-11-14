@@ -13,9 +13,9 @@ Select decks from the top-left menu or Design. **Match Vivace automatically** op
 
 ## Deck library and mini player
 
-Open the deck library from the dashboard header to browse images of all 11 decks. Select a card to apply it. Lyrics and DriveDeck Classic were retired in 0.15; old selections migrate to Ultra Glass and the audio visualizer. No lyric service runs or receives song metadata.
+Open the deck library from the dashboard header to browse the available decks. Select a card to apply it. Choose Ultra Lyrics or the Lyrics tab in Ultra Sound to follow the current song. Synced lyrics highlight the active line and show an animation when it matches a supported phrase. These views send the title, artist, album, and duration to [LRCLIB](https://lrclib.net/) to find a match. Tracks with plain lyrics show a scrollable text view.
 
-The mini player shows live album-colored audio levels with media playback controls.
+In the mini player, choose Visualizer for album-colored audio levels or Lyrics to follow one synced line at a time.
 
 ## Live map and drive-mode sync
 
@@ -128,3 +128,8 @@ Settings → Display includes resolution presets and custom dimensions. Apply re
 ## Linux
 
 Linux packages are prepared for x86-64 Linux desktops. See [LINUX-QUICKSTART.md](LINUX-QUICKSTART.md) for installation and companion setup, or [LINUX.md](LINUX.md) for development details. The AppImage supports in-app updates; Debian and portable packages update manually. Linux includes the exclusive Arch BTW deck. Linux-only releases do not replace the Windows update destination. Distribution coverage remains limited.
+### Ultra Modular
+
+Open **Deck Library → Ultra Modular** and choose **Edit layout**. Pick a module to add, then drag its title to move it or its bottom corner to resize it. Select a module to move, resize, or remove it with buttons. Use **Done** to keep the layout.
+
+Start with Everyday, Track, Music, or Blank. Enter a name and choose **Save preset → Done** to keep a layout you can return to. Desktop layouts and presets are included in DriveDeck settings exports. The phone dashboard can follow your saved desktop layout. Choose **Stay on mobile** to create a separate layout and presets on the phone.

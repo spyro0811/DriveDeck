@@ -73,6 +73,91 @@
 
 .lyrics-stage{position:absolute;inset:0;width:100%;height:100%;padding:0 16px;min-height:0}
 .lyrics-stage::before,.lyrics-stage::after{content:'';display:block;height:var(--lyric-space,100px);flex-shrink:0}
+.lyrics-stage {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  isolation: isolate;
+  position: absolute;
+  padding: 0;
+  overflow: hidden;
+  mask-image: none;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--album-2) 13%, transparent), transparent 76%);
+}
+.lyrics-stage::before, .lyrics-stage::after { content: none; }
+.sound-stage .lyric-effect {
+  position: absolute;
+  inset: 50% 4% auto auto;
+  width: clamp(44px, 39%, 192px);
+  height: auto;
+  transform: translateY(-50%);
+  opacity: .48;
+  pointer-events: none;
+}
+.lyric-lines {
+  position: relative;
+  overflow: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+  height: 100%;
+  padding-inline: clamp(10px, 1.5vw, 26px);
+  scrollbar-color: #ffffff33 transparent;
+}
+.lyric-lines.synced {
+  scrollbar-width: none;
+  mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+}
+.lyric-lines.synced::before, .lyric-lines.synced::after { content: ''; display: block; height: 50%; }
+.lyrics-stage .lyric-lines p {
+  font-size: clamp(12px, min(2.25vw, 4.7vh), 42px);
+  line-height: 1.17;
+  margin: 0 0 .55em;
+  color: #c2ccdb;
+  opacity: 1;
+}
+.lyric-lines.synced p { opacity: .58; }
+.lyric-lines p button {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: transparent;
+  border: 0;
+}
+.lyric-lines p button:disabled { opacity: 1; cursor: default; }
+.lyric-lines button:focus-visible { outline-offset: 2px; }
+.lyric-lines p.current { color: #f6f9ff; opacity: 1; }
+.lyric-lines p.current span {
+  background: linear-gradient(90deg, #fff var(--lyric-progress, 0%), #a6b9da var(--lyric-progress, 0%));
+  background-clip: text;
+  color: transparent;
+  animation: lyric-enter 320ms ease-out;
+}
+.lyrics-stage .lyrics-empty {
+  position: absolute;
+  inset: 0;
+  align-content: center;
+  margin: 0;
+  padding: 0 12px;
+  font-size: clamp(11px, 1.4vw, 18px);
+}
+.lyrics-credit {
+  padding: 3px 8px 5px;
+  color: #aeb9cf;
+  text-align: center;
+  font-size: clamp(8px, 1vw, 11px);
+}
+.sound-switch { max-width: 100%; }
+.sound-switch button { padding-inline: clamp(6px, 1.2vw, 22px); }
+[data-deck=lyrics] #deck-media { display: none !important; }
+@keyframes lyric-enter {
+  from { opacity: .64; filter: blur(1px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lyric-lines p.current span { background: none; color: inherit; animation: none; }
+}
 
 /* Light navigation map, with green land and frosted map controls. */
 .ultra-map{background:#d7e9cc;border-color:#c6d5bd;box-shadow:0 8px 28px #0c233424}
@@ -309,3 +394,27 @@
 .driving-sliders{display:grid;gap:18px;margin-top:22px;padding-top:20px;border-top:1px solid #35434e}.driving-sliders label{display:block;font-size:13px}.driving-sliders b{float:right;font-weight:500;color:#abd1f5}.driving-sliders input{display:block;width:100%;margin-top:12px;accent-color:#a8cbee}.driving-sliders small{line-height:1.6;letter-spacing:0;font-size:11px}
 
 .driving-sliders{grid-template-columns:1fr 1fr;gap:10px 24px;margin:0 0 18px;padding:12px 0 16px;border-top:0;border-bottom:1px solid #35434e}.driving-sliders>small{grid-column:1/-1}.driving-sliders input{margin-top:8px}@media(max-width:540px){.driving-sliders{grid-template-columns:1fr}}
+
+.lyrics-levels { width: min(46%, 220px); height: clamp(22px, 7vh, 56px); flex-shrink: 0; }
+
+.mini-lyric .lyric-lines {
+  display: block; padding: 0; height: auto; overflow: hidden; text-overflow: ellipsis;
+}
+.mini-lyric .lyric-lines:empty { display: none; }
+.mini-lyric .lyrics-empty { color: #adb9ca; }
+.sound-bottom-controls > .mini-lyric { width: 100%; order: -1; }
+.sound-bottom-controls .deck-transport:has(.mini-player-view:not([hidden])) { gap: clamp(5px, 1.2vw, 16px); }
+#martin-art > .mini-lyric { width: 100%; }
+.deck-stage #martin-art .mini-player-view { width: auto; max-width: 82px; }
+
+@media (max-height: 580px) {
+  .lyrics-levels { height: clamp(18px, 6vh, 33px); }
+}
+
+#plaid-media-slot { flex-shrink: 0; padding: 0 10px 5px; position: relative; z-index: 2; }
+
+.deck-choice .deck-card-name, #cards .deck-card-name { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.deck-new-tag {
+  display: inline-block; padding: 2px 5px; border-radius: 4px;
+  color: #132520; background: #bdeddc; font-size: 9px; font-weight: 750; letter-spacing: .055em;
+}

@@ -50,3 +50,15 @@ body.immersive .plaid-track{border:0;border-radius:0}body.immersive .plaid-track
 @media(max-height:600px){.pt-stability>svg{max-height:37cqh}.pt-stability{gap:3px}.pt-damage-list{gap:4px}.pt-stability>header{font-size:8px}.pt-stability>footer{font-size:6px}}
 
 #phone-version{font-size:10px;font-weight:400;color:#a8b8c9;margin-left:5px;white-space:nowrap}
+
+#modular-setup {
+  position: absolute; inset: 0; display: grid; place-items: safe center; overflow: auto;
+  padding: clamp(12px, 4vw, 28px); background: #101a23; text-align: left;
+}
+#modular-setup > div { width: min(100%, 460px); }
+#modular-setup h2 { margin: 0 0 10px; font-size: clamp(16px, 4vw, 23px); line-height: 1.2; }
+#modular-setup p { margin: 0 0 14px; line-height: 1.45; color: #bccbd9; }
+#modular-setup small { display: block; margin-top: 10px; color: #a8b8c9; }
+.modular-setup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#modular-stay { background: #bdeddc; color: #102722; border-color: transparent; font-weight: 650; }
+.um-read-only .um-spectrum-toggle { display: none !important; }

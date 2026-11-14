@@ -19,6 +19,7 @@ export class MapCanvas {
     if (!map?.position || !map.roads?.length) return;
     const buildings=cleanBuildings(map.buildings,map.roads);
     map={...map,buildings,terrain:urbanTerrain(map.terrain,buildings)};
+    const detailScale = settings.compactMap ? Math.min(1, Math.min(w, h) / 140) : 1;
     const perspective=settings.atlasView==='3d';
     if(perspective){drawPerspective(ctx,map,settings,w,h,palette)}else{
     if (this.roads !== map.roads) {
@@ -39,22 +40,23 @@ export class MapCanvas {
     if(this.buildingPath){ctx.fillStyle=palette.building;ctx.strokeStyle=palette.buildingEdge;ctx.lineWidth=.8/scale;ctx.fill(this.buildingPath);ctx.stroke(this.buildingPath);}
     const widths = [11, 8, 5.5, 2.5];
     for (let i = 3; i >= 0; i--) {
-      ctx.strokeStyle = i===0?palette.majorEdge:palette.casing; ctx.lineWidth = (widths[i] + 2) / scale; ctx.stroke(this.paths[i]);
+      ctx.strokeStyle = i===0?palette.majorEdge:palette.casing; ctx.lineWidth = (widths[i] + 2) * detailScale / scale; ctx.stroke(this.paths[i]);
     }
     // All casings underneath all road fills: a wider road must not erase the
     // connecting end of a narrower road at a shared intersection.
     for (let i = 3; i >= 0; i--) {
-      ctx.strokeStyle = palette.roads[i]; ctx.lineWidth = widths[i] / scale; ctx.stroke(this.paths[i]);
+      ctx.strokeStyle = palette.roads[i]; ctx.lineWidth = widths[i] * detailScale / scale; ctx.stroke(this.paths[i]);
     }
     if (map.connected && map.route?.length > 1) {
       const path = new Path2D(); map.route.forEach((p, i) => i ? path.lineTo(p[0], p[1]) : path.moveTo(p[0], p[1]));
-      ctx.strokeStyle = palette.routeEdge; ctx.lineWidth = 12 / scale; ctx.stroke(path);
-      ctx.strokeStyle = '#0969df'; ctx.lineWidth = 8 / scale; ctx.stroke(path);
-      ctx.strokeStyle = '#278bff'; ctx.lineWidth = 5 / scale; ctx.stroke(path);
+      ctx.strokeStyle = palette.routeEdge; ctx.lineWidth = 12 * detailScale / scale; ctx.stroke(path);
+      ctx.strokeStyle = '#0969df'; ctx.lineWidth = 8 * detailScale / scale; ctx.stroke(path);
+      ctx.strokeStyle = '#278bff'; ctx.lineWidth = 5 * detailScale / scale; ctx.stroke(path);
     }
     ctx.restore();
     }
     ctx.save(); ctx.translate(w / 2, h * (perspective?.68:.59));
+    ctx.scale(detailScale, detailScale);
     ctx.globalAlpha = map.connected ? 1 : .4;
     ctx.fillStyle='#1683ff20';ctx.beginPath();ctx.arc(0,0,33,0,Math.PI*2);ctx.fill();
     ctx.shadowColor = '#234e6d55'; ctx.shadowBlur = 9;ctx.shadowOffsetY=2;

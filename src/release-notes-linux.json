@@ -1,4 +1,4 @@
 {
-  "version": "0.20.5",
-  "notes": "What’s new in DriveDeck 0.20.5\n\n• Added live surrounding traffic, road lanes, sidewalks, barriers, signs, traffic lights and optional scenery to Model S and Model Three.\n• Added driving-view quality options and controls for render distance and turn-camera frame rate.\n• Improved concrete-barrier continuity and visualizer performance with cached geometry and background processing.\n• Turn cameras now run only while a supported live driving deck is visible, and stop when DriveDeck closes.\n• Added Stability and Plaid Stability displays, animated drivetrain wheels and improved display selection.\n• Improved mobile scenery, shared driving-view settings, dashboard refresh and automatic screen-awake handling.\n• Refined sidewalk surfaces, navigation guidance and Martin’s animated album artwork.\n\nWith BeamNG fully closed, use Connect → Install companion to update the bundled companion before restarting the game. Scenery coverage depends on the map’s available data; some objects may be missing or approximate. Existing settings are preserved."
+  "version": "0.20.6",
+  "notes": "Includes the same deck, lyrics, and mobile dashboard updates on Linux."
 }
