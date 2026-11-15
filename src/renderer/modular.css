@@ -397,8 +397,9 @@
 .um-appearance-dialog form { display: grid; gap: 12px; }
 .um-appearance-dialog h2 { margin: 0 0 2px; font-size: 20px; }
 .modular-deck .um-appearance-dialog label { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--um-ink); }
-.modular-deck .um-appearance-dialog input[type=color] { padding: 2px; width: 44px; height: 30px; min-height: 0; margin-left: auto; cursor: pointer; }
 .modular-deck .um-appearance-dialog input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: #bdeddc; }
-.um-appearance-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.um-appearance-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .modular-deck .um-appearance-actions button[type=submit] { background: #bdeddc; color: #102722; border-color: transparent; font-weight: 700; }
 .um-appearance-dialog [role=status] { color: #ffd298; font-size: 12px; margin: 0; }
+
+.um-appearance-actions [data-um-color-reset] { margin-inline-end: auto; }

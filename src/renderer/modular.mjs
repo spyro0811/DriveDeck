@@ -1,6 +1,8 @@
 import { columns, rows, maxModules, maxPresets, moduleCatalog, moduleSize, starterPresets, fits, findSpace, sanitizeLayout, sanitizePresets, sanitizeModularAppearance, tileVisualizerEnabled } from './modular-layout.mjs';
 import { mountModule } from './modular-tiles.mjs';
 
+const defaultBackground = '#101820';
+
 export const modularMarkup = () => `<section id="modular-deck" class="modular-deck" hidden>
   <header class="um-header">
     <div class="um-wordmark">Ultra <b>Modular</b><small data-um-status></small></div>
@@ -54,11 +56,10 @@ export const modularMarkup = () => `<section id="modular-deck" class="modular-de
   <dialog class="deck-library um-appearance-dialog" data-um-appearance aria-label="Ultra Modular background">
     <form data-um-appearance-form>
       <h2>Background</h2>
-      <label>Background color <input type="color" data-um-color value="#101820"></label>
       <label><input type="checkbox" data-um-sync> Sync background to album art</label>
       <label><input type="checkbox" data-um-distinction> Tile distinction</label>
       <p data-um-appearance-error role="status" hidden>Could not save the background settings. Try again.</p>
-      <div class="um-appearance-actions"><button type="button" data-um-appearance-cancel>Cancel</button><button type="submit">Apply</button></div>
+      <div class="um-appearance-actions"><button type="button" data-um-color-reset>Reset to default</button><button type="button" data-um-appearance-cancel>Cancel</button><button type="submit">Apply</button></div>
     </form>
   </dialog>
   <div class="um-viewport"><div class="um-grid" data-um-grid></div></div>
@@ -118,6 +119,11 @@ export class ModularDeck {
     this.control('background').onclick = () => this.openAppearance();
     this.control('appearance-cancel').onclick = () => this.appearanceDialog.close();
     this.control('appearance-form').oninput = () => this.previewAppearance();
+    this.control('color-reset').onclick = () => {
+      this.appearanceColor = null;
+      this.control('sync').checked = false;
+      this.previewAppearance();
+    };
     this.control('appearance-form').onsubmit = event => { event.preventDefault(); void this.saveAppearance(); };
     this.appearanceDialog.onclose = () => this.applyAppearance(this.appearance);
     this.appearanceDialog.onclick = event => {
@@ -214,12 +220,12 @@ export class ModularDeck {
     this.root.style.setProperty('--um-background-color', color ?? '');
     this.root.dataset.syncArtwork = String(syncArtwork);
     this.root.classList.toggle('um-seamless', !tileDistinction);
-    const [r, g, b] = (color ?? '#101820').slice(1).match(/../g).map(value => parseInt(value, 16));
+    const [r, g, b] = (color ?? defaultBackground).slice(1).match(/../g).map(value => parseInt(value, 16));
     this.root.classList.toggle('um-light-background', r * .213 + g * .715 + b * .072 > 160);
   }
 
   openAppearance() {
-    this.control('color').value = this.appearance.color ?? '#101820';
+    this.appearanceColor = this.appearance.color;
     this.control('sync').checked = this.appearance.syncArtwork;
     this.control('distinction').checked = this.appearance.tileDistinction;
     this.control('appearance-error').hidden = true;
@@ -227,9 +233,8 @@ export class ModularDeck {
   }
 
   readAppearance() {
-    const color = this.control('color').value;
     return {
-      color: this.appearance.color === null && color === '#101820' ? null : color,
+      color: this.appearanceColor,
       syncArtwork: this.control('sync').checked,
       tileDistinction: this.control('distinction').checked,
     };

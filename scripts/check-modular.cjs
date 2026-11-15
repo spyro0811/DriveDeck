@@ -15,7 +15,7 @@ app.whenReady().then(async () => {
   const errors = [];
   win.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
   await win.loadFile(file);
-  await js(`localStorage.setItem('drivedeck-preview', JSON.stringify({deck:'modular',autoDeck:false,demo:true}));`);
+  await js(`localStorage.setItem('drivedeck-preview', JSON.stringify({deck:'modular',autoDeck:false,demo:true,modularAppearance:{color:'#253647'}}));`);
   await win.loadFile(file);
   for (let i = 0; i < 100; i++) {
     if (await js("document.querySelectorAll('.um-tile').length === 6")) break;
@@ -101,9 +101,9 @@ app.whenReady().then(async () => {
   await js("document.querySelector('[data-module=artwork] .um-spectrum-toggle').click()");
   await wait(120);
   assert.equal(await js("document.querySelector('[data-module=artwork] .um-media-spectrum').hidden"), true);
-  await js(`document.querySelector('[data-um-background]').click();
-    document.querySelector('[data-um-color]').value = '#253647';
-    document.querySelector('[data-um-sync]').checked = true;
+  await js("document.querySelector('[data-um-background]').click()");
+  assert.equal(await js("document.querySelector('[data-um-color-open], [data-um-color-form]')"), null);
+  await js(`document.querySelector('[data-um-sync]').checked = true;
     document.querySelector('[data-um-distinction]').checked = false;
     document.querySelector('[data-um-distinction]').dispatchEvent(new Event('input', { bubbles: true }));`);
   assert.equal(await js("getComputedStyle(document.querySelector('.modular-deck')).backgroundColor"), 'rgb(37, 54, 71)');
@@ -115,6 +115,13 @@ app.whenReady().then(async () => {
   await wait(400);
   assert.equal(await js("document.querySelector('[data-module=artwork] .um-media-spectrum').hidden"), true);
   assert.equal(await js("getComputedStyle(document.querySelector('.um-tile')).borderTopWidth"), '0px');
+  await js("document.querySelector('[data-um-background]').click()");
+  await js(`document.querySelector('[data-um-color-reset]').click();
+    document.querySelector('[data-um-appearance-form]').requestSubmit();`);
+  await wait(120);
+  assert.deepEqual(await js("JSON.parse(localStorage.getItem('drivedeck-preview')).modularAppearance"),
+    {color:null,syncArtwork:false,tileDistinction:false});
+  assert.match(await js("getComputedStyle(document.querySelector('.modular-deck')).backgroundImage"), /radial-gradient/);
   await choose('[data-um-presets]', '4'); // Night drive
   await wait(120);
 
